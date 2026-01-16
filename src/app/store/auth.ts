@@ -76,12 +76,19 @@ export const useAuthStore = defineStore('auth', () => {
     return userRoles.value
   })
   
+  // Normalize permission format (convert colon to dot notation)
+  function normalizePermission(permission: string): string {
+    return permission.replace(/:/g, '.')
+  }
+
   function hasPermission(permission: string): boolean {
-    return permissions.value.includes(permission)
+    const normalizedPermission = normalizePermission(permission)
+    // Check both the normalized format and original format for backward compatibility
+    return permissions.value.includes(normalizedPermission) || permissions.value.includes(permission)
   }
   
   function hasAnyPermission(permissionList: string[]): boolean {
-    return permissionList.some(perm => permissions.value.includes(perm))
+    return permissionList.some(perm => hasPermission(perm))
   }
   
   function hasRole(role: string): boolean {
