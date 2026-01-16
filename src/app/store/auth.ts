@@ -14,10 +14,26 @@ export interface RegisterCredentials {
   password_confirmation: string
 }
 
+export interface Permission {
+  id: string | number
+  name: string
+  guard_name?: string
+  [key: string]: any
+}
+
+export interface Role {
+  id: string | number
+  name: string
+  guard_name?: string
+  [key: string]: any
+}
+
 export interface User {
   id: string | number
   name: string
   email: string
+  permissions?: Permission[]
+  roles?: Role[]
   [key: string]: any
 }
 
@@ -36,6 +52,37 @@ export const useAuthStore = defineStore('auth', () => {
   )
 
   const isAuthenticated = computed(() => !!token.value)
+  
+  const permissions = computed(() => {
+    if (!user.value) return []
+    // Get permissions from user object (direct permissions + role permissions)
+    const directPermissions = user.value.permissions || []
+    const rolePermissions = user.value.roles?.flatMap(role => role.permissions || []) || []
+    
+    // Combine and deduplicate by name
+    const allPermissions = [...directPermissions, ...rolePermissions]
+    const uniquePermissions = allPermissions.filter((perm, index, self) =>
+      index === self.findIndex(p => p.name === perm.name)
+    )
+    return uniquePermissions.map(p => p.name)
+  })
+  
+  const roles = computed(() => {
+    if (!user.value) return []
+    return (user.value.roles || []).map(r => r.name)
+  })
+  
+  function hasPermission(permission: string): boolean {
+    return permissions.value.includes(permission)
+  }
+  
+  function hasAnyPermission(permissionList: string[]): boolean {
+    return permissionList.some(perm => permissions.value.includes(perm))
+  }
+  
+  function hasRole(role: string): boolean {
+    return roles.value.includes(role)
+  }
 
   function setToken(newToken: string) {
     token.value = newToken
@@ -177,6 +224,11 @@ export const useAuthStore = defineStore('auth', () => {
     token,
     user,
     isAuthenticated,
+    permissions,
+    roles,
+    hasPermission,
+    hasAnyPermission,
+    hasRole,
     setToken,
     setUser,
     login,

@@ -80,19 +80,68 @@ const router = createRouter({
       component: () => import('@/pages/Reports/EventReports.vue'),
       meta: { requiresAuth: true },
     },
+    {
+      path: '/users',
+      name: 'UserList',
+      component: () => import('@/pages/Users/UserList.vue'),
+      meta: { requiresAuth: true, permission: 'users.read' },
+    },
+    {
+      path: '/users/:id',
+      name: 'UserDetail',
+      component: () => import('@/pages/Users/UserDetail.vue'),
+      meta: { requiresAuth: true, permission: 'users.read' },
+    },
+    {
+      path: '/roles',
+      name: 'RoleList',
+      component: () => import('@/pages/Roles/RoleList.vue'),
+      meta: { requiresAuth: true, permission: 'roles.read' },
+    },
+    {
+      path: '/roles/:id',
+      name: 'RoleDetail',
+      component: () => import('@/pages/Roles/RoleDetail.vue'),
+      meta: { requiresAuth: true, permission: 'roles.read' },
+    },
+    {
+      path: '/permissions',
+      name: 'PermissionList',
+      component: () => import('@/pages/Permissions/PermissionList.vue'),
+      meta: { requiresAuth: true, permission: 'permissions.read' },
+    },
   ],
 })
 
 router.beforeEach((to, from, next) => {
   const authStore = useAuthStore()
   
+  // Check authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     next('/login')
-  } else if (to.path === '/login' && authStore.isAuthenticated) {
-    next('/dashboard')
-  } else {
-    next()
+    return
   }
+  
+  // Redirect authenticated users away from login
+  if (to.path === '/login' && authStore.isAuthenticated) {
+    next('/dashboard')
+    return
+  }
+  
+  // Check permissions
+  if (to.meta.permission) {
+    const requiredPermission = to.meta.permission as string
+    if (!authStore.hasPermission(requiredPermission)) {
+      // Redirect to dashboard with error message
+      next({
+        path: '/dashboard',
+        query: { error: 'You do not have permission to access this page' }
+      })
+      return
+    }
+  }
+  
+  next()
 })
 
 export default router

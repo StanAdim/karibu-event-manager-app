@@ -186,6 +186,62 @@
                 <span v-if="!sidebarCollapsed">Reports</span>
               </router-link>
             </li>
+
+            <!-- Access Management -->
+            <li v-if="canAccessAccessManagement">
+              <div class="px-3 py-2">
+                <button
+                  @click="toggleAccessManagementMenu"
+                  class="flex items-center w-full text-sm text-chatgpt-text hover:bg-gray-100 rounded-lg px-3 py-2 transition-colors"
+                >
+                  <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  <span v-if="!sidebarCollapsed" class="flex-1 text-left">Access Management</span>
+                  <svg
+                    v-if="!sidebarCollapsed"
+                    :class="['w-4 h-4 transition-transform', accessManagementMenuOpen ? 'rotate-90' : '']"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+                <ul
+                  v-if="accessManagementMenuOpen && !sidebarCollapsed"
+                  class="mt-1 ml-8 space-y-1"
+                >
+                  <li v-if="canAccessUsers">
+                    <router-link
+                      to="/users"
+                      class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"
+                      :class="{ 'bg-gray-100 text-chatgpt-text font-medium': $route.path === '/users' && !$route.params.id }"
+                    >
+                      Users
+                    </router-link>
+                  </li>
+                  <li v-if="canAccessRoles">
+                    <router-link
+                      to="/roles"
+                      class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"
+                      :class="{ 'bg-gray-100 text-chatgpt-text font-medium': $route.path === '/roles' && !$route.params.id }"
+                    >
+                      Roles
+                    </router-link>
+                  </li>
+                  <li v-if="canAccessPermissions">
+                    <router-link
+                      to="/permissions"
+                      class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"
+                      :class="{ 'bg-gray-100 text-chatgpt-text font-medium': $route.path === '/permissions' }"
+                    >
+                      Permissions
+                    </router-link>
+                  </li>
+                </ul>
+              </div>
+            </li>
           </ul>
         </nav>
 
@@ -243,22 +299,31 @@ import { ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAuthStore } from '../store/auth'
 import { useAuth } from '../composables/useAuth'
+import { usePermissions } from '../composables/usePermissions'
 import Breadcrumbs from '@/components/ui/Breadcrumbs.vue'
 
 const route = useRoute()
 const authStore = useAuthStore()
 const { logout } = useAuth()
+const {
+  canAccessUsers,
+  canAccessRoles,
+  canAccessPermissions,
+  canAccessAccessManagement,
+} = usePermissions()
 
 const sidebarCollapsed = ref(false)
 const eventsMenuOpen = ref(false)
 const participantsMenuOpen = ref(false)
 const checkpointsMenuOpen = ref(false)
+const accessManagementMenuOpen = ref(false)
 
 // Auto-expand menus based on current route
 watch(() => route.path, (path) => {
   eventsMenuOpen.value = path.startsWith('/events')
   participantsMenuOpen.value = path.startsWith('/participants')
   checkpointsMenuOpen.value = path.startsWith('/checkpoints')
+  accessManagementMenuOpen.value = path.startsWith('/users') || path.startsWith('/roles') || path.startsWith('/permissions')
 }, { immediate: true })
 
 function toggleSidebar() {
@@ -275,6 +340,10 @@ function toggleParticipantsMenu() {
 
 function toggleCheckpointsMenu() {
   checkpointsMenuOpen.value = !checkpointsMenuOpen.value
+}
+
+function toggleAccessManagementMenu() {
+  accessManagementMenuOpen.value = !accessManagementMenuOpen.value
 }
 
 function handleLogout() {
