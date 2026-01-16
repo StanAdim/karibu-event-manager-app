@@ -87,13 +87,6 @@
                   >
                     Edit
                   </button>
-                  <button
-                    v-if="!participant.checkedIn"
-                    @click="handleCheckIn(participant.id)"
-                    class="text-green-600 hover:text-green-800 transition-colors"
-                  >
-                    Check In
-                  </button>
                   <router-link
                     :to="`/participants/${participant.id}`"
                     class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
@@ -177,34 +170,39 @@ function closeModal() {
 }
 
 async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantDto & { id: string })) {
+  const eventId = route.query.eventId as string | undefined
+  if (!eventId) {
+    const errorMessage = 'Event ID is required'
+    if (participantFormRef.value) {
+      participantFormRef.value.setError(errorMessage)
+    }
+    return
+  }
+
   try {
     if ('id' in data) {
-      // Edit mode
-      await participantStore.updateParticipant(data.id, data)
+      // Edit mode - ensure eventId is included
+      const updateData = { ...data, eventId: data.eventId || eventId }
+      await participantStore.updateParticipant(eventId, data.id, updateData)
     } else {
-      // Create mode
-      await participantStore.createParticipant(data)
+      // Create mode - ensure eventId is included
+      const createData = { ...data, eventId: data.eventId || eventId }
+      await participantStore.createParticipant(createData)
     }
-    await participantStore.fetchParticipants(route.query.eventId as string | undefined) // Refresh list
+    await participantStore.fetchParticipants(eventId) // Refresh list
     closeModal()
   } catch (err: any) {
-    const errorMessage = err.response?.data?.message || 'Failed to save participant. Please try again.'
+    const errorMessage = err.message || err.response?.data?.message || 'Failed to save participant. Please try again.'
     if (participantFormRef.value) {
       participantFormRef.value.setError(errorMessage)
     }
   }
 }
 
-async function handleCheckIn(id: string) {
-  try {
-    await participantStore.checkInParticipant(id)
-  } catch (error) {
-    console.error('Failed to check in participant:', error)
-  }
-}
-
 onMounted(() => {
   const eventId = route.query.eventId as string | undefined
-  participantStore.fetchParticipants(eventId)
+  if (eventId) {
+    participantStore.fetchParticipants(eventId)
+  }
 })
 </script>

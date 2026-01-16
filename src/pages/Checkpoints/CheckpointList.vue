@@ -172,19 +172,33 @@ function closeModal() {
 }
 
 async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto & { id: string })) {
+  const eventId = route.query.eventId as string | undefined
+  if (!eventId && !data.eventId) {
+    const errorMessage = 'Event ID is required'
+    if (checkpointFormRef.value) {
+      checkpointFormRef.value.setError(errorMessage)
+    }
+    return
+  }
+
+  const finalEventId = eventId || data.eventId
+  if (!finalEventId) {
+    return
+  }
+
   try {
     if ('id' in data) {
       // Edit mode
-      await checkpointStore.updateCheckpoint(data.id, data)
+      await checkpointStore.updateCheckpoint(finalEventId, data.id, data)
     } else {
-      // Create mode
-      await checkpointStore.createCheckpoint(data)
+      // Create mode - ensure eventId is included
+      const createData = { ...data, eventId: finalEventId }
+      await checkpointStore.createCheckpoint(createData)
     }
-    const eventId = route.query.eventId as string | undefined
-    await checkpointStore.fetchCheckpoints(eventId) // Refresh list
+    await checkpointStore.fetchCheckpoints(finalEventId) // Refresh list
     closeModal()
   } catch (err: any) {
-    const errorMessage = err.response?.data?.message || 'Failed to save checkpoint. Please try again.'
+    const errorMessage = err.message || err.response?.data?.message || 'Failed to save checkpoint. Please try again.'
     if (checkpointFormRef.value) {
       checkpointFormRef.value.setError(errorMessage)
     }

@@ -136,12 +136,21 @@ function closeModal() {
 async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto & { id: string })) {
   if (!('id' in data) || !checkpointStore.currentCheckpoint) return
   
+  const eventId = checkpointStore.currentCheckpoint.eventId
+  if (!eventId) {
+    const errorMessage = 'Event ID is required'
+    if (checkpointFormRef.value) {
+      checkpointFormRef.value.setError(errorMessage)
+    }
+    return
+  }
+  
   try {
-    await checkpointStore.updateCheckpoint(data.id, data)
-    await checkpointStore.fetchCheckpointById(data.id) // Refresh current checkpoint
+    await checkpointStore.updateCheckpoint(eventId, data.id, data)
+    await checkpointStore.fetchCheckpointById(eventId, data.id) // Refresh current checkpoint
     closeModal()
   } catch (err: any) {
-    const errorMessage = err.response?.data?.message || 'Failed to update checkpoint. Please try again.'
+    const errorMessage = err.message || err.response?.data?.message || 'Failed to update checkpoint. Please try again.'
     if (checkpointFormRef.value) {
       checkpointFormRef.value.setError(errorMessage)
     }
@@ -150,9 +159,14 @@ async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto
 
 onMounted(async () => {
   const checkpointId = route.params.id as string
-  await Promise.all([
-    eventStore.fetchEvents(),
-    checkpointStore.fetchCheckpointById(checkpointId),
-  ])
+  const eventId = route.query.eventId as string | undefined
+  
+  await eventStore.fetchEvents()
+  
+  if (eventId) {
+    await checkpointStore.fetchCheckpointById(eventId, checkpointId)
+  } else if (checkpointStore.currentCheckpoint?.eventId) {
+    await checkpointStore.fetchCheckpointById(checkpointStore.currentCheckpoint.eventId, checkpointId)
+  }
 })
 </script>

@@ -160,30 +160,35 @@ function closeModal() {
 async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantDto & { id: string })) {
   if (!('id' in data) || !participantStore.currentParticipant) return
   
+  const eventId = participantStore.currentParticipant.eventId
+  if (!eventId) {
+    const errorMessage = 'Event ID is required'
+    if (participantFormRef.value) {
+      participantFormRef.value.setError(errorMessage)
+    }
+    return
+  }
+  
   try {
-    await participantStore.updateParticipant(data.id, data)
-    await participantStore.fetchParticipantById(data.id) // Refresh current participant
+    await participantStore.updateParticipant(eventId, data.id, data)
+    await participantStore.fetchParticipantById(eventId, data.id) // Refresh current participant
     closeModal()
   } catch (err: any) {
-    const errorMessage = err.response?.data?.message || 'Failed to update participant. Please try again.'
+    const errorMessage = err.message || err.response?.data?.message || 'Failed to update participant. Please try again.'
     if (participantFormRef.value) {
       participantFormRef.value.setError(errorMessage)
     }
   }
 }
 
-async function handleCheckIn() {
-  if (!participantStore.currentParticipant) return
-  
-  try {
-    await participantStore.checkInParticipant(participantStore.currentParticipant.id)
-  } catch (error) {
-    console.error('Failed to check in participant:', error)
-  }
-}
-
 onMounted(() => {
   const participantId = route.params.id as string
-  participantStore.fetchParticipantById(participantId)
+  const eventId = route.query.eventId as string | undefined
+  
+  if (!eventId && participantStore.currentParticipant?.eventId) {
+    participantStore.fetchParticipantById(participantStore.currentParticipant.eventId, participantId)
+  } else if (eventId) {
+    participantStore.fetchParticipantById(eventId, participantId)
+  }
 })
 </script>

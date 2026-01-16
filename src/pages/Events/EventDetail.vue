@@ -174,7 +174,7 @@ async function handleFormSubmit(data: CreateEventDto | (CreateEventDto & { id: s
     await eventStore.fetchEventById(data.id) // Refresh current event
     closeModal()
   } catch (err: any) {
-    const errorMessage = err.response?.data?.message || 'Failed to update event. Please try again.'
+    const errorMessage = err.message || err.response?.data?.message || 'Failed to update event. Please try again.'
     if (eventFormRef.value) {
       eventFormRef.value.setError(errorMessage)
     }

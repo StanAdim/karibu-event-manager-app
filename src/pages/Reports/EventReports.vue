@@ -144,12 +144,16 @@ function formatDate(dateString: string) {
   })
 }
 
-function getEventParticipantsCount(eventId: string) {
-  return participantStore.participants.filter(p => p.eventId === eventId).length
+function getEventParticipantsCount(eventId: string | number) {
+  return participantStore.participants.filter(p => 
+    String(p.eventId) === String(eventId)
+  ).length
 }
 
-function getEventCheckpointsCount(eventId: string) {
-  return checkpointStore.checkpoints.filter(c => c.eventId === eventId).length
+function getEventCheckpointsCount(eventId: string | number) {
+  return checkpointStore.checkpoints.filter(c => 
+    String(c.eventId) === String(eventId)
+  ).length
 }
 
 function getStatusClass(status?: string) {
@@ -168,11 +172,18 @@ function getStatusClass(status?: string) {
 onMounted(async () => {
   loading.value = true
   try {
-    await Promise.all([
-      eventStore.fetchEvents(),
-      participantStore.fetchParticipants(),
-      checkpointStore.fetchCheckpoints(),
-    ])
+    // Fetch events first
+    await eventStore.fetchEvents()
+    
+    // Fetch participants and checkpoints for all events
+    const participantPromises = eventStore.events.map(event => 
+      participantStore.fetchParticipants(event.id)
+    )
+    const checkpointPromises = eventStore.events.map(event => 
+      checkpointStore.fetchCheckpoints(event.id)
+    )
+    
+    await Promise.all([...participantPromises, ...checkpointPromises])
   } catch (error) {
     console.error('Failed to load reports:', error)
   } finally {
