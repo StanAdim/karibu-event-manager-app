@@ -11,6 +11,7 @@
             class="px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
           />
           <button
+            v-if="canWriteParticipants"
             @click="openCreateModal"
             class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
           >
@@ -26,6 +27,7 @@
       <div v-else-if="filteredParticipants.length === 0" class="bg-white rounded-lg border border-chatgpt-border p-12 text-center">
         <p class="text-chatgpt-text-light mb-4">No participants found</p>
         <button
+          v-if="canWriteParticipants"
           @click="openCreateModal"
           class="text-chatgpt-text hover:underline"
         >
@@ -82,12 +84,14 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end space-x-3">
                   <button
+                    v-if="canWriteParticipants"
                     @click="openEditModal(participant)"
                     class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
                   >
                     Edit
                   </button>
                   <router-link
+                    v-if="canReadParticipants"
                     :to="`/participants/${participant.id}`"
                     class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
                   >
@@ -124,7 +128,10 @@ import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import ParticipantForm from '@/components/common/ParticipantForm.vue'
+import { usePermissions } from '@/app/composables/usePermissions'
 import { useParticipantStore, type Participant, type CreateParticipantDto } from '@/app/store/participant'
+
+const { canReadParticipants, canWriteParticipants } = usePermissions()
 
 const route = useRoute()
 const participantStore = useParticipantStore()

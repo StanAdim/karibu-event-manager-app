@@ -20,6 +20,7 @@
           <h2 class="text-2xl font-semibold text-chatgpt-text">{{ eventStore.currentEvent.name }}</h2>
           <div class="flex items-center space-x-4">
             <button
+              v-if="canWriteEvents"
               @click="openEditModal"
               class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
             >
@@ -125,7 +126,10 @@ import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import EventForm from '@/components/common/EventForm.vue'
+import { usePermissions } from '@/app/composables/usePermissions'
 import { useEventStore, type CreateEventDto } from '@/app/store/event'
+
+const { canWriteEvents } = usePermissions()
 
 const route = useRoute()
 const eventStore = useEventStore()

@@ -32,12 +32,13 @@ export const usePermissionStore = defineStore('permission', () => {
     }
   }
 
-  // Group permissions by resource (e.g., events.read, events.write -> "events")
+  // Group permissions by resource (e.g., events:read, events:write -> "events")
   function getGroupedPermissions(): Record<string, Permission[]> {
     const grouped: Record<string, Permission[]> = {}
     
     permissions.value.forEach(permission => {
-      const parts = permission.name.split('.')
+      // Handle both colon (events:read) and dot (events.read) notation
+      const parts = permission.name.split(/[:.]/)
       const resource = parts[0] || 'other'
       
       if (!grouped[resource]) {

@@ -46,7 +46,7 @@ import type { Permission } from '@/app/store/permission'
 
 interface Props {
   userId: string | number
-  currentPermissions: Permission[]
+  currentPermissions: Permission[] | string[]
 }
 
 const props = defineProps<Props>()
@@ -65,7 +65,8 @@ const groupedPermissions = computed(() => {
   const grouped: Record<string, typeof permissionStore.permissions> = {}
   
   permissionStore.permissions.forEach(permission => {
-    const parts = permission.name.split('.')
+    // Handle both colon (events:read) and dot (events.read) notation
+    const parts = permission.name.split(/[:.]/)
     const resource = parts[0] || 'other'
     
     if (!grouped[resource]) {
@@ -78,7 +79,14 @@ const groupedPermissions = computed(() => {
 })
 
 function isPermissionAssigned(permissionId: string | number): boolean {
-  return props.currentPermissions.some(p => p.id === permissionId)
+  return props.currentPermissions.some((p: Permission | string) => {
+    if (typeof p === 'string') {
+      // If permission is a string, compare with permission name
+      const permission = permissionStore.permissions.find(perm => perm.name === p)
+      return permission ? permission.id === permissionId : false
+    }
+    return p.id === permissionId
+  })
 }
 
 async function togglePermission(permissionId: string | number, assigned: boolean) {
@@ -87,7 +95,15 @@ async function togglePermission(permissionId: string | number, assigned: boolean
   success.value = null
 
   try {
-    const currentPermissionIds = props.currentPermissions.map(p => p.id)
+    // Convert current permissions to IDs
+    const currentPermissionIds = props.currentPermissions.map((p: Permission | string) => {
+      if (typeof p === 'string') {
+        const permission = permissionStore.permissions.find(perm => perm.name === p)
+        return permission ? permission.id : null
+      }
+      return p.id
+    }).filter((id): id is string | number => id !== null)
+    
     let newPermissionIds: (string | number)[]
 
     if (assigned) {

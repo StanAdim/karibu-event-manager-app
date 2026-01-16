@@ -11,6 +11,7 @@
             class="px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
           />
           <button
+            v-if="canWriteEvents"
             @click="openCreateModal"
             class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
           >
@@ -26,6 +27,7 @@
       <div v-else-if="filteredEvents.length === 0" class="bg-white rounded-lg border border-chatgpt-border p-12 text-center">
         <p class="text-chatgpt-text-light mb-4">No events found</p>
         <button
+          v-if="canWriteEvents"
           @click="openCreateModal"
           class="text-chatgpt-text hover:underline"
         >
@@ -89,12 +91,14 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end space-x-3">
                   <button
+                    v-if="canWriteEvents"
                     @click="openEditModal(event)"
                     class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
                   >
                     Edit
                   </button>
                   <router-link
+                    v-if="canReadEvents"
                     :to="`/events/${event.id}`"
                     class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
                   >
@@ -130,7 +134,10 @@ import { ref, computed, onMounted } from 'vue'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import EventForm from '@/components/common/EventForm.vue'
+import { usePermissions } from '@/app/composables/usePermissions'
 import { useEventStore, type Event, type CreateEventDto } from '@/app/store/event'
+
+const { canReadEvents, canWriteEvents } = usePermissions()
 
 const eventStore = useEventStore()
 const searchQuery = ref('')

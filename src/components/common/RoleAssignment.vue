@@ -42,7 +42,7 @@ import type { Role } from '@/app/store/role'
 
 interface Props {
   userId: string | number
-  currentRoles: Role[]
+  currentRoles: Role[] | string[]
 }
 
 const props = defineProps<Props>()
@@ -59,7 +59,14 @@ const success = ref<string | null>(null)
 const allRoles = computed(() => roleStore.roles)
 
 function isRoleAssigned(roleId: string | number): boolean {
-  return props.currentRoles.some(r => r.id === roleId)
+  return props.currentRoles.some((r: Role | string) => {
+    if (typeof r === 'string') {
+      // If role is a string, compare with role name
+      const role = roleStore.roles.find(role => role.name === r)
+      return role ? role.id === roleId : false
+    }
+    return r.id === roleId
+  })
 }
 
 async function toggleRole(roleId: string | number, assigned: boolean) {
@@ -68,7 +75,15 @@ async function toggleRole(roleId: string | number, assigned: boolean) {
   success.value = null
 
   try {
-    const currentRoleIds = props.currentRoles.map(r => r.id)
+    // Convert current roles to IDs
+    const currentRoleIds = props.currentRoles.map((r: Role | string) => {
+      if (typeof r === 'string') {
+        const role = roleStore.roles.find(role => role.name === r)
+        return role ? role.id : null
+      }
+      return r.id
+    }).filter((id): id is string | number => id !== null)
+    
     let newRoleIds: (string | number)[]
 
     if (assigned) {

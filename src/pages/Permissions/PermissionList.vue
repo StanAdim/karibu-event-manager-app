@@ -70,7 +70,8 @@ const groupedPermissions = computed(() => {
   const grouped: Record<string, typeof filtered> = {}
   
   filtered.forEach(permission => {
-    const parts = permission.name.split('.')
+    // Handle both colon (events:read) and dot (events.read) notation
+    const parts = permission.name.split(/[:.]/)
     const resource = parts[0] || 'other'
     
     if (!grouped[resource]) {

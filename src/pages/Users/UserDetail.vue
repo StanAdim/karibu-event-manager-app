@@ -44,7 +44,7 @@
             </div>
 
             <!-- Roles Assignment -->
-            <div class="bg-white rounded-lg border border-chatgpt-border p-6">
+            <div v-if="canManageUserRoles" class="bg-white rounded-lg border border-chatgpt-border p-6">
               <h3 class="text-lg font-semibold text-chatgpt-text mb-4">Roles</h3>
               <RoleAssignment
                 :user-id="userStore.currentUser.id"
@@ -54,7 +54,7 @@
             </div>
 
             <!-- Direct Permissions Assignment -->
-            <div class="bg-white rounded-lg border border-chatgpt-border p-6">
+            <div v-if="canManageUserPermissions" class="bg-white rounded-lg border border-chatgpt-border p-6">
               <h3 class="text-lg font-semibold text-chatgpt-text mb-4">Direct Permissions</h3>
               <PermissionAssignment
                 :user-id="userStore.currentUser.id"
@@ -75,7 +75,10 @@ import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import RoleAssignment from '@/components/common/RoleAssignment.vue'
 import PermissionAssignment from '@/components/common/PermissionAssignment.vue'
+import { usePermissions } from '@/app/composables/usePermissions'
 import { useUserStore } from '@/app/store/user'
+
+const { canManageUserRoles, canManageUserPermissions } = usePermissions()
 
 const route = useRoute()
 const userStore = useUserStore()

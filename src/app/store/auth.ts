@@ -41,6 +41,9 @@ export interface AuthResponse {
   token?: string
   access_token?: string
   user?: User
+  roles?: string[]
+  permissions?: string[]
+  scopes?: string[]
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -50,26 +53,31 @@ export const useAuthStore = defineStore('auth', () => {
       ? JSON.parse(localStorage.getItem('auth_user')!) 
       : null
   )
+  
+  // // Initialize permissions and roles from localStorage
+  // const userPermissions = ref<string[]>(
+  //   localStorage.getItem('user_permissions')
+  //     ? JSON.parse(localStorage.getItem('user_permissions')!)
+  //     : []
+  // )
+  // const userRoles = ref<string[]>(
+  //   localStorage.getItem('user_roles')
+  //     ? JSON.parse(localStorage.getItem('user_roles')!)
+  //     : []
+  // )
 
   const isAuthenticated = computed(() => !!token.value)
   
+  // Store permissions and roles from auth response
+  const userPermissions = ref<string[]>([])
+  const userRoles = ref<string[]>([])
+  
   const permissions = computed(() => {
-    if (!user.value) return []
-    // Get permissions from user object (direct permissions + role permissions)
-    const directPermissions = user.value.permissions || []
-    const rolePermissions = user.value.roles?.flatMap(role => role.permissions || []) || []
-    
-    // Combine and deduplicate by name
-    const allPermissions = [...directPermissions, ...rolePermissions]
-    const uniquePermissions = allPermissions.filter((perm, index, self) =>
-      index === self.findIndex(p => p.name === perm.name)
-    )
-    return uniquePermissions.map(p => p.name)
+    return userPermissions.value
   })
   
   const roles = computed(() => {
-    if (!user.value) return []
-    return (user.value.roles || []).map(r => r.name)
+    return userRoles.value
   })
   
   function hasPermission(permission: string): boolean {
@@ -105,11 +113,22 @@ export const useAuthStore = defineStore('auth', () => {
         setToken(authToken)
       }
 
-      // Fetch user if not included in response
+      // Set user data
       if (authData.user) {
         setUser(authData.user)
       } else {
         await fetchUser()
+      }
+      
+      // Store permissions and roles from response
+      if (authData.permissions) {
+        userPermissions.value = authData.permissions
+        localStorage.setItem('user_permissions', JSON.stringify(authData.permissions))
+      }
+      
+      if (authData.roles) {
+        userRoles.value = authData.roles
+        localStorage.setItem('user_roles', JSON.stringify(authData.roles))
       }
       
       return authData
@@ -142,10 +161,24 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUser(): Promise<User> {
     try {
-      const response = await api.get<{ data?: User; user?: User }>('/api/v1/auth/user')
+      const response = await api.get<{ data?: User; user?: User; permissions?: string[]; roles?: string[] }>('/api/v1/auth/user')
       const userData = response.data.data || response.data.user || response.data
       if (userData) {
         setUser(userData as User)
+      }
+      
+      // Update permissions and roles if provided
+      if (response.data.permissions) {
+        userPermissions.value = response.data.permissions
+        localStorage.setItem('user_permissions', JSON.stringify(response.data.permissions))
+      }
+      
+      if (response.data.roles) {
+        userRoles.value = response.data.roles
+        localStorage.setItem('user_roles', JSON.stringify(response.data.roles))
+      }
+      
+      if (userData) {
         return userData as User
       }
       throw new Error('User data not found in response')
@@ -182,8 +215,12 @@ export const useAuthStore = defineStore('auth', () => {
       // Clear local state
       token.value = null
       user.value = null
+      userPermissions.value = []
+      userRoles.value = []
       localStorage.removeItem('auth_token')
       localStorage.removeItem('auth_user')
+      localStorage.removeItem('user_permissions')
+      localStorage.removeItem('user_roles')
     }
   }
 

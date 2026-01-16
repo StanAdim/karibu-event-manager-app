@@ -54,11 +54,11 @@
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="flex flex-wrap gap-2">
                   <span
-                    v-for="role in user.roles || []"
-                    :key="role.id"
+                    v-for="(role, index) in user.roles || []"
+                    :key="typeof role === 'string' ? role : role.id || index"
                     class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
                   >
-                    {{ role.name }}
+                    {{ typeof role === 'string' ? role : role.name }}
                   </span>
                   <span v-if="!user.roles || user.roles.length === 0" class="text-sm text-chatgpt-text-light">
                     No roles

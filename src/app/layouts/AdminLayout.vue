@@ -33,7 +33,7 @@
             </li>
 
             <!-- Events -->
-            <li>
+            <li v-if="canReadEvents">
               <div class="px-3 py-2">
                 <button
                   @click="toggleEventsMenu"
@@ -66,21 +66,12 @@
                       Event List
                     </router-link>
                   </li>
-                  <li>
-                    <router-link
-                      to="/events/create"
-                      class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"
-                      :class="{ 'bg-gray-100 text-chatgpt-text font-medium': $route.path === '/events/create' }"
-                    >
-                      Create Event
-                    </router-link>
-                  </li>
                 </ul>
               </div>
             </li>
 
             <!-- Participants -->
-            <li>
+            <li v-if="canReadParticipants">
               <div class="px-3 py-2">
                 <button
                   @click="toggleParticipantsMenu"
@@ -113,21 +104,12 @@
                       Participant List
                     </router-link>
                   </li>
-                  <li>
-                    <router-link
-                      to="/participants/create"
-                      class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"
-                      :class="{ 'bg-gray-100 text-chatgpt-text font-medium': $route.path === '/participants/create' }"
-                    >
-                      Add Participant
-                    </router-link>
-                  </li>
                 </ul>
               </div>
             </li>
 
             <!-- Checkpoints -->
-            <li>
+            <li v-if="canReadCheckpoints">
               <div class="px-3 py-2">
                 <button
                   @click="toggleCheckpointsMenu"
@@ -160,21 +142,12 @@
                       Checkpoint List
                     </router-link>
                   </li>
-                  <li>
-                    <router-link
-                      to="/checkpoints/create"
-                      class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"
-                      :class="{ 'bg-gray-100 text-chatgpt-text font-medium': $route.path === '/checkpoints/create' }"
-                    >
-                      Create Checkpoint
-                    </router-link>
-                  </li>
                 </ul>
               </div>
             </li>
 
             <!-- Reports -->
-            <li>
+            <li v-if="canViewReports">
               <router-link
                 to="/reports"
                 class="flex items-center px-3 py-2 rounded-lg text-sm text-chatgpt-text hover:bg-gray-100 transition-colors"
@@ -310,6 +283,10 @@ const {
   canAccessRoles,
   canAccessPermissions,
   canAccessAccessManagement,
+  canReadEvents,
+  canReadParticipants,
+  canReadCheckpoints,
+  canViewReports,
 } = usePermissions()
 
 const sidebarCollapsed = ref(false)

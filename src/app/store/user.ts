@@ -20,8 +20,8 @@ export interface User {
   id: string | number
   email: string
   name: string
-  roles?: Role[]
-  permissions?: Permission[]
+  roles?: Role[] | string[]
+  permissions?: Permission[] | string[]
   [key: string]: any
 }
 

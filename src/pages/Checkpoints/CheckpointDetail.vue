@@ -20,6 +20,7 @@
           <h2 class="text-2xl font-semibold text-chatgpt-text">{{ checkpointStore.currentCheckpoint.name }}</h2>
           <div class="flex items-center space-x-4">
             <button
+              v-if="canWriteCheckpoints"
               @click="openEditModal"
               class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
             >
@@ -108,8 +109,11 @@ import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import CheckpointForm from '@/components/common/CheckpointForm.vue'
+import { usePermissions } from '@/app/composables/usePermissions'
 import { useCheckpointStore, type CreateCheckpointDto } from '@/app/store/checkpoint'
 import { useEventStore } from '@/app/store/event'
+
+const { canWriteCheckpoints } = usePermissions()
 
 const route = useRoute()
 const checkpointStore = useCheckpointStore()
@@ -117,8 +121,9 @@ const eventStore = useEventStore()
 const isModalOpen = ref(false)
 const checkpointFormRef = ref<InstanceType<typeof CheckpointForm> | null>(null)
 
-function getEventName(eventId: string) {
-  const event = eventStore.events.find(e => e.id === eventId)
+function getEventName(eventId: string | number | undefined) {
+  if (!eventId) return undefined
+  const event = eventStore.events.find((e: { id: string | number }) => String(e.id) === String(eventId))
   return event?.name
 }
 
@@ -146,8 +151,9 @@ async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto
   }
   
   try {
-    await checkpointStore.updateCheckpoint(eventId, data.id, data)
-    await checkpointStore.fetchCheckpointById(eventId, data.id) // Refresh current checkpoint
+    const eventIdStr = String(eventId)
+    await checkpointStore.updateCheckpoint(eventIdStr, data.id, data)
+    await checkpointStore.fetchCheckpointById(eventIdStr, data.id) // Refresh current checkpoint
     closeModal()
   } catch (err: any) {
     const errorMessage = err.message || err.response?.data?.message || 'Failed to update checkpoint. Please try again.'
@@ -166,7 +172,10 @@ onMounted(async () => {
   if (eventId) {
     await checkpointStore.fetchCheckpointById(eventId, checkpointId)
   } else if (checkpointStore.currentCheckpoint?.eventId) {
-    await checkpointStore.fetchCheckpointById(checkpointStore.currentCheckpoint.eventId, checkpointId)
+    const currentEventId = checkpointStore.currentCheckpoint.eventId
+    if (currentEventId) {
+      await checkpointStore.fetchCheckpointById(String(currentEventId), checkpointId)
+    }
   }
 })
 </script>

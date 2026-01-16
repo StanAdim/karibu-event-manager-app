@@ -22,6 +22,7 @@
           </h2>
           <div class="flex items-center space-x-4">
             <button
+              v-if="canWriteParticipants"
               @click="openEditModal"
               class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
             >
@@ -129,7 +130,10 @@ import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
 import ParticipantForm from '@/components/common/ParticipantForm.vue'
+import { usePermissions } from '@/app/composables/usePermissions'
 import { useParticipantStore, type CreateParticipantDto } from '@/app/store/participant'
+
+const { canWriteParticipants } = usePermissions()
 
 const route = useRoute()
 const participantStore = useParticipantStore()

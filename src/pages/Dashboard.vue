@@ -51,7 +51,9 @@
         <h3 class="text-lg font-semibold text-chatgpt-text mb-4">Quick Actions</h3>
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <router-link
-            to="/events/create"
+            v-if="canWriteEvents"
+            to="/events"
+            @click.prevent="openCreateEventModal"
             class="p-4 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors"
           >
             <div class="flex items-center space-x-3">
@@ -63,7 +65,9 @@
           </router-link>
 
           <router-link
-            to="/participants/create"
+            v-if="canWriteParticipants"
+            to="/participants"
+            @click.prevent="openCreateParticipantModal"
             class="p-4 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors"
           >
             <div class="flex items-center space-x-3">
@@ -75,7 +79,9 @@
           </router-link>
 
           <router-link
-            to="/checkpoints/create"
+            v-if="canWriteCheckpoints"
+            to="/checkpoints"
+            @click.prevent="openCreateCheckpointModal"
             class="p-4 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors"
           >
             <div class="flex items-center space-x-3">
@@ -87,6 +93,7 @@
           </router-link>
 
           <router-link
+            v-if="canViewReports"
             to="/reports"
             class="p-4 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors"
           >
@@ -105,10 +112,30 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
+import { usePermissions } from '@/app/composables/usePermissions'
 import { useEventStore } from '@/app/store/event'
 import { useParticipantStore } from '@/app/store/participant'
 import { useCheckpointStore } from '@/app/store/checkpoint'
+
+const router = useRouter()
+const { canWriteEvents, canWriteParticipants, canWriteCheckpoints, canViewReports } = usePermissions()
+
+function openCreateEventModal() {
+  router.push('/events')
+  // The EventList component will handle opening the modal
+}
+
+function openCreateParticipantModal() {
+  router.push('/participants')
+  // The ParticipantList component will handle opening the modal
+}
+
+function openCreateCheckpointModal() {
+  router.push('/checkpoints')
+  // The CheckpointList component will handle opening the modal
+}
 
 const eventStore = useEventStore()
 const participantStore = useParticipantStore()
