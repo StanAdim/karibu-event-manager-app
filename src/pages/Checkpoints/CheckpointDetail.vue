@@ -1,0 +1,106 @@
+<template>
+  <AdminLayout>
+    <div>
+      <div v-if="checkpointStore.loading" class="text-center py-12">
+        <p class="text-chatgpt-text-light">Loading checkpoint details...</p>
+      </div>
+
+      <div v-else-if="!checkpointStore.currentCheckpoint" class="text-center py-12">
+        <p class="text-chatgpt-text-light mb-4">Checkpoint not found</p>
+        <router-link
+          to="/checkpoints"
+          class="text-chatgpt-text hover:underline"
+        >
+          Back to Checkpoints
+        </router-link>
+      </div>
+
+      <div v-else>
+        <div class="flex items-center justify-between mb-6">
+          <h2 class="text-2xl font-semibold text-chatgpt-text">{{ checkpointStore.currentCheckpoint.name }}</h2>
+          <div class="flex items-center space-x-4">
+            <router-link
+              to="/checkpoints"
+              class="px-4 py-2 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
+            >
+              Back to List
+            </router-link>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div class="lg:col-span-2">
+            <div class="bg-white rounded-lg border border-chatgpt-border p-6">
+              <h3 class="text-lg font-semibold text-chatgpt-text mb-4">Checkpoint Information</h3>
+              <dl class="space-y-4">
+                <div>
+                  <dt class="text-sm font-medium text-chatgpt-text-light mb-1">Description</dt>
+                  <dd class="text-sm text-chatgpt-text">
+                    {{ checkpointStore.currentCheckpoint.description || 'No description provided' }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-sm font-medium text-chatgpt-text-light mb-1">Event</dt>
+                  <dd class="text-sm text-chatgpt-text">
+                    {{ getEventName(checkpointStore.currentCheckpoint.eventId) || 'Not specified' }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-sm font-medium text-chatgpt-text-light mb-1">Location</dt>
+                  <dd class="text-sm text-chatgpt-text">
+                    {{ checkpointStore.currentCheckpoint.location || 'Not specified' }}
+                  </dd>
+                </div>
+                <div>
+                  <dt class="text-sm font-medium text-chatgpt-text-light mb-1">Order</dt>
+                  <dd class="text-sm text-chatgpt-text">
+                    {{ checkpointStore.currentCheckpoint.order || 'Not specified' }}
+                  </dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+
+          <div class="space-y-6">
+            <div class="bg-white rounded-lg border border-chatgpt-border p-6">
+              <h3 class="text-lg font-semibold text-chatgpt-text mb-4">Quick Actions</h3>
+              <div class="space-y-3">
+                <router-link
+                  :to="`/events/${checkpointStore.currentCheckpoint.eventId}`"
+                  class="block w-full px-4 py-2 text-center border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
+                >
+                  View Event
+                </router-link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </AdminLayout>
+</template>
+
+<script setup lang="ts">
+import { onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import AdminLayout from '@/app/layouts/AdminLayout.vue'
+import { useCheckpointStore } from '@/app/store/checkpoint'
+import { useEventStore } from '@/app/store/event'
+
+const route = useRoute()
+const checkpointStore = useCheckpointStore()
+const eventStore = useEventStore()
+
+function getEventName(eventId: string) {
+  const event = eventStore.events.find(e => e.id === eventId)
+  return event?.name
+}
+
+onMounted(async () => {
+  const checkpointId = route.params.id as string
+  await Promise.all([
+    eventStore.fetchEvents(),
+    checkpointStore.fetchCheckpointById(checkpointId),
+  ])
+})
+</script>
