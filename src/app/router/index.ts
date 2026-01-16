@@ -113,8 +113,18 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from, next) => {
+router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
+  
+  // If authenticated but user data is missing, fetch it
+  if (authStore.isAuthenticated && !authStore.user) {
+    try {
+      await authStore.fetchUser()
+    } catch (error) {
+      // If fetch fails, user might not be authenticated anymore
+      console.error('Failed to fetch user in route guard:', error)
+    }
+  }
   
   // Check authentication
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {

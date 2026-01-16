@@ -54,23 +54,19 @@ export const useAuthStore = defineStore('auth', () => {
       : null
   )
   
-  // // Initialize permissions and roles from localStorage
-  // const userPermissions = ref<string[]>(
-  //   localStorage.getItem('user_permissions')
-  //     ? JSON.parse(localStorage.getItem('user_permissions')!)
-  //     : []
-  // )
-  // const userRoles = ref<string[]>(
-  //   localStorage.getItem('user_roles')
-  //     ? JSON.parse(localStorage.getItem('user_roles')!)
-  //     : []
-  // )
-
   const isAuthenticated = computed(() => !!token.value)
   
-  // Store permissions and roles from auth response
-  const userPermissions = ref<string[]>([])
-  const userRoles = ref<string[]>([])
+  // Initialize permissions and roles from localStorage
+  const userPermissions = ref<string[]>(
+    localStorage.getItem('user_permissions')
+      ? JSON.parse(localStorage.getItem('user_permissions')!)
+      : []
+  )
+  const userRoles = ref<string[]>(
+    localStorage.getItem('user_roles')
+      ? JSON.parse(localStorage.getItem('user_roles')!)
+      : []
+  )
   
   const permissions = computed(() => {
     return userPermissions.value
@@ -161,29 +157,65 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function fetchUser(): Promise<User> {
     try {
-      const response = await api.get<{ data?: User; user?: User; permissions?: string[]; roles?: string[] }>('/api/v1/auth/user')
-      const userData = response.data.data || response.data.user || response.data
-      if (userData) {
+      const response = await api.get<{ 
+        data?: User
+        user?: User
+        permissions?: string[]
+        roles?: string[]
+      }>('/api/v1/auth/user')
+      
+      // Handle different response formats
+      const responseData = response.data as any
+      const userData = responseData.data || responseData.user || responseData
+      
+      if (userData && typeof userData === 'object' && 'id' in userData) {
         setUser(userData as User)
       }
       
-      // Update permissions and roles if provided
-      if (response.data.permissions) {
-        userPermissions.value = response.data.permissions
-        localStorage.setItem('user_permissions', JSON.stringify(response.data.permissions))
+      // Update permissions and roles if provided in response
+      if (responseData.permissions && Array.isArray(responseData.permissions)) {
+        userPermissions.value = responseData.permissions
+        localStorage.setItem('user_permissions', JSON.stringify(responseData.permissions))
       }
       
-      if (response.data.roles) {
-        userRoles.value = response.data.roles
-        localStorage.setItem('user_roles', JSON.stringify(response.data.roles))
+      if (responseData.roles && Array.isArray(responseData.roles)) {
+        userRoles.value = responseData.roles
+        localStorage.setItem('user_roles', JSON.stringify(responseData.roles))
       }
       
-      if (userData) {
+      if (userData && typeof userData === 'object' && 'id' in userData) {
         return userData as User
       }
       throw new Error('User data not found in response')
     } catch (error) {
+      // On error, clear stored permissions/roles if token is invalid
+      if (error && typeof error === 'object' && 'status' in error && (error as any).status === 401) {
+        userPermissions.value = []
+        userRoles.value = []
+        localStorage.removeItem('user_permissions')
+        localStorage.removeItem('user_roles')
+      }
       throw error
+    }
+  }
+  
+  // Initialize user data on app load if authenticated
+  async function initializeAuth() {
+    if (token.value && !user.value) {
+      try {
+        await fetchUser()
+      } catch (error) {
+        // If fetch fails, clear token and redirect to login
+        console.error('Failed to fetch user on initialization:', error)
+        logout()
+      }
+    } else if (token.value && user.value && userPermissions.value.length === 0) {
+      // If user exists but permissions are missing, fetch them
+      try {
+        await fetchUser()
+      } catch (error) {
+        console.error('Failed to fetch user permissions:', error)
+      }
     }
   }
 
@@ -271,6 +303,7 @@ export const useAuthStore = defineStore('auth', () => {
     login,
     register,
     fetchUser,
+    initializeAuth,
     refreshToken,
     logout,
     changePassword,
