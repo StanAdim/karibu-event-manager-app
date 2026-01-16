@@ -19,6 +19,12 @@
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-2xl font-semibold text-chatgpt-text">{{ eventStore.currentEvent.name }}</h2>
           <div class="flex items-center space-x-4">
+            <button
+              @click="openEditModal"
+              class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
+            >
+              Edit Event
+            </button>
             <router-link
               to="/events"
               class="px-4 py-2 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
@@ -93,18 +99,38 @@
           </div>
         </div>
       </div>
+
+      <!-- Edit Event Modal -->
+      <BaseModal
+        v-model="isModalOpen"
+        title="Edit Event"
+        @close="closeModal"
+      >
+        <EventForm
+          ref="eventFormRef"
+          :event="eventStore.currentEvent"
+          :loading="eventStore.loading"
+          @submit="handleFormSubmit"
+          @cancel="closeModal"
+        />
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
-import { useEventStore } from '@/app/store/event'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import EventForm from '@/components/common/EventForm.vue'
+import { useEventStore, type CreateEventDto } from '@/app/store/event'
 
 const route = useRoute()
 const eventStore = useEventStore()
+const isModalOpen = ref(false)
+const eventFormRef = ref<InstanceType<typeof EventForm> | null>(null)
 
 function formatDateTime(dateString: string) {
   return new Date(dateString).toLocaleString('en-US', {
@@ -126,6 +152,32 @@ function getStatusClass(status?: string) {
       return 'bg-red-100 text-red-800'
     default:
       return 'bg-blue-100 text-blue-800'
+  }
+}
+
+function openEditModal() {
+  isModalOpen.value = true
+}
+
+function closeModal() {
+  isModalOpen.value = false
+  if (eventFormRef.value) {
+    eventFormRef.value.setError('')
+  }
+}
+
+async function handleFormSubmit(data: CreateEventDto | (CreateEventDto & { id: string })) {
+  if (!('id' in data) || !eventStore.currentEvent) return
+  
+  try {
+    await eventStore.updateEvent(data.id, data)
+    await eventStore.fetchEventById(data.id) // Refresh current event
+    closeModal()
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Failed to update event. Please try again.'
+    if (eventFormRef.value) {
+      eventFormRef.value.setError(errorMessage)
+    }
   }
 }
 

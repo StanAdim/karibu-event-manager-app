@@ -10,12 +10,12 @@
             placeholder="Search participants..."
             class="px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
           />
-          <router-link
-            to="/participants/create"
+          <button
+            @click="openCreateModal"
             class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
           >
             Add Participant
-          </router-link>
+          </button>
         </div>
       </div>
 
@@ -25,12 +25,12 @@
 
       <div v-else-if="filteredParticipants.length === 0" class="bg-white rounded-lg border border-chatgpt-border p-12 text-center">
         <p class="text-chatgpt-text-light mb-4">No participants found</p>
-        <router-link
-          to="/participants/create"
+        <button
+          @click="openCreateModal"
           class="text-chatgpt-text hover:underline"
         >
           Add your first participant
-        </router-link>
+        </button>
       </div>
 
       <div v-else class="bg-white rounded-lg border border-chatgpt-border overflow-hidden">
@@ -82,6 +82,12 @@
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                 <div class="flex items-center justify-end space-x-3">
                   <button
+                    @click="openEditModal(participant)"
+                    class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <button
                     v-if="!participant.checkedIn"
                     @click="handleCheckIn(participant.id)"
                     class="text-green-600 hover:text-green-800 transition-colors"
@@ -100,6 +106,21 @@
           </tbody>
         </table>
       </div>
+
+      <!-- Create/Edit Participant Modal -->
+      <BaseModal
+        v-model="isModalOpen"
+        :title="modalTitle"
+        @close="closeModal"
+      >
+        <ParticipantForm
+          ref="participantFormRef"
+          :participant="selectedParticipant"
+          :loading="participantStore.loading"
+          @submit="handleFormSubmit"
+          @cancel="closeModal"
+        />
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>
@@ -108,11 +129,20 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
-import { useParticipantStore } from '@/app/store/participant'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import ParticipantForm from '@/components/common/ParticipantForm.vue'
+import { useParticipantStore, type Participant, type CreateParticipantDto } from '@/app/store/participant'
 
 const route = useRoute()
 const participantStore = useParticipantStore()
 const searchQuery = ref('')
+const isModalOpen = ref(false)
+const selectedParticipant = ref<Participant | null>(null)
+const participantFormRef = ref<InstanceType<typeof ParticipantForm> | null>(null)
+
+const modalTitle = computed(() => {
+  return selectedParticipant.value ? 'Edit Participant' : 'Add Participant'
+})
 
 const filteredParticipants = computed(() => {
   if (!searchQuery.value) {
@@ -127,6 +157,43 @@ const filteredParticipants = computed(() => {
       participant.phone?.toLowerCase().includes(query)
   )
 })
+
+function openCreateModal() {
+  selectedParticipant.value = null
+  isModalOpen.value = true
+}
+
+function openEditModal(participant: Participant) {
+  selectedParticipant.value = participant
+  isModalOpen.value = true
+}
+
+function closeModal() {
+  isModalOpen.value = false
+  selectedParticipant.value = null
+  if (participantFormRef.value) {
+    participantFormRef.value.setError('')
+  }
+}
+
+async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantDto & { id: string })) {
+  try {
+    if ('id' in data) {
+      // Edit mode
+      await participantStore.updateParticipant(data.id, data)
+    } else {
+      // Create mode
+      await participantStore.createParticipant(data)
+    }
+    await participantStore.fetchParticipants(route.query.eventId as string | undefined) // Refresh list
+    closeModal()
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Failed to save participant. Please try again.'
+    if (participantFormRef.value) {
+      participantFormRef.value.setError(errorMessage)
+    }
+  }
+}
 
 async function handleCheckIn(id: string) {
   try {

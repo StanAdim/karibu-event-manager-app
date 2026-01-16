@@ -22,6 +22,12 @@
           </h2>
           <div class="flex items-center space-x-4">
             <button
+              @click="openEditModal"
+              class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
+            >
+              Edit Participant
+            </button>
+            <button
               v-if="!participantStore.currentParticipant.checkedIn"
               @click="handleCheckIn"
               class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
@@ -97,18 +103,38 @@
           </div>
         </div>
       </div>
+
+      <!-- Edit Participant Modal -->
+      <BaseModal
+        v-model="isModalOpen"
+        title="Edit Participant"
+        @close="closeModal"
+      >
+        <ParticipantForm
+          ref="participantFormRef"
+          :participant="participantStore.currentParticipant"
+          :loading="participantStore.loading"
+          @submit="handleFormSubmit"
+          @cancel="closeModal"
+        />
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
-import { useParticipantStore } from '@/app/store/participant'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import ParticipantForm from '@/components/common/ParticipantForm.vue'
+import { useParticipantStore, type CreateParticipantDto } from '@/app/store/participant'
 
 const route = useRoute()
 const participantStore = useParticipantStore()
+const isModalOpen = ref(false)
+const participantFormRef = ref<InstanceType<typeof ParticipantForm> | null>(null)
 
 function formatDateTime(dateString: string) {
   return new Date(dateString).toLocaleString('en-US', {
@@ -118,6 +144,32 @@ function formatDateTime(dateString: string) {
     hour: '2-digit',
     minute: '2-digit',
   })
+}
+
+function openEditModal() {
+  isModalOpen.value = true
+}
+
+function closeModal() {
+  isModalOpen.value = false
+  if (participantFormRef.value) {
+    participantFormRef.value.setError('')
+  }
+}
+
+async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantDto & { id: string })) {
+  if (!('id' in data) || !participantStore.currentParticipant) return
+  
+  try {
+    await participantStore.updateParticipant(data.id, data)
+    await participantStore.fetchParticipantById(data.id) // Refresh current participant
+    closeModal()
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Failed to update participant. Please try again.'
+    if (participantFormRef.value) {
+      participantFormRef.value.setError(errorMessage)
+    }
+  }
 }
 
 async function handleCheckIn() {

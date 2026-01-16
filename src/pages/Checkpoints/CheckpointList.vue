@@ -10,12 +10,12 @@
             placeholder="Search checkpoints..."
             class="px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
           />
-          <router-link
-            to="/checkpoints/create"
+          <button
+            @click="openCreateModal"
             class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
           >
             Create Checkpoint
-          </router-link>
+          </button>
         </div>
       </div>
 
@@ -25,12 +25,12 @@
 
       <div v-else-if="filteredCheckpoints.length === 0" class="bg-white rounded-lg border border-chatgpt-border p-12 text-center">
         <p class="text-chatgpt-text-light mb-4">No checkpoints found</p>
-        <router-link
-          to="/checkpoints/create"
+        <button
+          @click="openCreateModal"
           class="text-chatgpt-text hover:underline"
         >
           Create your first checkpoint
-        </router-link>
+        </button>
       </div>
 
       <div v-else class="bg-white rounded-lg border border-chatgpt-border overflow-hidden">
@@ -76,17 +76,40 @@
                 {{ checkpoint.order || '—' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <router-link
-                  :to="`/checkpoints/${checkpoint.id}`"
-                  class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
-                >
-                  View
-                </router-link>
+                <div class="flex items-center justify-end space-x-3">
+                  <button
+                    @click="openEditModal(checkpoint)"
+                    class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <router-link
+                    :to="`/checkpoints/${checkpoint.id}`"
+                    class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
+                  >
+                    View
+                  </router-link>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- Create/Edit Checkpoint Modal -->
+      <BaseModal
+        v-model="isModalOpen"
+        :title="modalTitle"
+        @close="closeModal"
+      >
+        <CheckpointForm
+          ref="checkpointFormRef"
+          :checkpoint="selectedCheckpoint"
+          :loading="checkpointStore.loading"
+          @submit="handleFormSubmit"
+          @cancel="closeModal"
+        />
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>
@@ -95,13 +118,22 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
-import { useCheckpointStore } from '@/app/store/checkpoint'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import CheckpointForm from '@/components/common/CheckpointForm.vue'
+import { useCheckpointStore, type Checkpoint, type CreateCheckpointDto } from '@/app/store/checkpoint'
 import { useEventStore } from '@/app/store/event'
 
 const route = useRoute()
 const checkpointStore = useCheckpointStore()
 const eventStore = useEventStore()
 const searchQuery = ref('')
+const isModalOpen = ref(false)
+const selectedCheckpoint = ref<Checkpoint | null>(null)
+const checkpointFormRef = ref<InstanceType<typeof CheckpointForm> | null>(null)
+
+const modalTitle = computed(() => {
+  return selectedCheckpoint.value ? 'Edit Checkpoint' : 'Create Checkpoint'
+})
 
 const filteredCheckpoints = computed(() => {
   if (!searchQuery.value) {
@@ -119,6 +151,44 @@ const filteredCheckpoints = computed(() => {
 function getEventName(eventId: string) {
   const event = eventStore.events.find(e => e.id === eventId)
   return event?.name
+}
+
+function openCreateModal() {
+  selectedCheckpoint.value = null
+  isModalOpen.value = true
+}
+
+function openEditModal(checkpoint: Checkpoint) {
+  selectedCheckpoint.value = checkpoint
+  isModalOpen.value = true
+}
+
+function closeModal() {
+  isModalOpen.value = false
+  selectedCheckpoint.value = null
+  if (checkpointFormRef.value) {
+    checkpointFormRef.value.setError('')
+  }
+}
+
+async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto & { id: string })) {
+  try {
+    if ('id' in data) {
+      // Edit mode
+      await checkpointStore.updateCheckpoint(data.id, data)
+    } else {
+      // Create mode
+      await checkpointStore.createCheckpoint(data)
+    }
+    const eventId = route.query.eventId as string | undefined
+    await checkpointStore.fetchCheckpoints(eventId) // Refresh list
+    closeModal()
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Failed to save checkpoint. Please try again.'
+    if (checkpointFormRef.value) {
+      checkpointFormRef.value.setError(errorMessage)
+    }
+  }
 }
 
 onMounted(async () => {

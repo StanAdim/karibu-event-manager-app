@@ -10,12 +10,12 @@
             placeholder="Search events..."
             class="px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
           />
-          <router-link
-            to="/events/create"
+          <button
+            @click="openCreateModal"
             class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
           >
             Create Event
-          </router-link>
+          </button>
         </div>
       </div>
 
@@ -25,12 +25,12 @@
 
       <div v-else-if="filteredEvents.length === 0" class="bg-white rounded-lg border border-chatgpt-border p-12 text-center">
         <p class="text-chatgpt-text-light mb-4">No events found</p>
-        <router-link
-          to="/events/create"
+        <button
+          @click="openCreateModal"
           class="text-chatgpt-text hover:underline"
         >
           Create your first event
-        </router-link>
+        </button>
       </div>
 
       <div v-else class="bg-white rounded-lg border border-chatgpt-border overflow-hidden">
@@ -87,17 +87,40 @@
                 </span>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                <router-link
-                  :to="`/events/${event.id}`"
-                  class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
-                >
-                  View
-                </router-link>
+                <div class="flex items-center justify-end space-x-3">
+                  <button
+                    @click="openEditModal(event)"
+                    class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
+                  >
+                    Edit
+                  </button>
+                  <router-link
+                    :to="`/events/${event.id}`"
+                    class="text-chatgpt-text hover:text-chatgpt-text-light transition-colors"
+                  >
+                    View
+                  </router-link>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <!-- Create/Edit Event Modal -->
+      <BaseModal
+        v-model="isModalOpen"
+        :title="modalTitle"
+        @close="closeModal"
+      >
+        <EventForm
+          ref="eventFormRef"
+          :event="selectedEvent"
+          :loading="eventStore.loading"
+          @submit="handleFormSubmit"
+          @cancel="closeModal"
+        />
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>
@@ -105,10 +128,19 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
-import { useEventStore } from '@/app/store/event'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import EventForm from '@/components/common/EventForm.vue'
+import { useEventStore, type Event, type CreateEventDto } from '@/app/store/event'
 
 const eventStore = useEventStore()
 const searchQuery = ref('')
+const isModalOpen = ref(false)
+const selectedEvent = ref<Event | null>(null)
+const eventFormRef = ref<InstanceType<typeof EventForm> | null>(null)
+
+const modalTitle = computed(() => {
+  return selectedEvent.value ? 'Edit Event' : 'Create Event'
+})
 
 const filteredEvents = computed(() => {
   if (!searchQuery.value) {
@@ -141,6 +173,43 @@ function getStatusClass(status?: string) {
       return 'bg-red-100 text-red-800'
     default:
       return 'bg-blue-100 text-blue-800'
+  }
+}
+
+function openCreateModal() {
+  selectedEvent.value = null
+  isModalOpen.value = true
+}
+
+function openEditModal(event: Event) {
+  selectedEvent.value = event
+  isModalOpen.value = true
+}
+
+function closeModal() {
+  isModalOpen.value = false
+  selectedEvent.value = null
+  if (eventFormRef.value) {
+    eventFormRef.value.setError('')
+  }
+}
+
+async function handleFormSubmit(data: CreateEventDto | (CreateEventDto & { id: string })) {
+  try {
+    if ('id' in data) {
+      // Edit mode
+      await eventStore.updateEvent(data.id, data)
+    } else {
+      // Create mode
+      await eventStore.createEvent(data)
+    }
+    await eventStore.fetchEvents() // Refresh list
+    closeModal()
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Failed to save event. Please try again.'
+    if (eventFormRef.value) {
+      eventFormRef.value.setError(errorMessage)
+    }
   }
 }
 

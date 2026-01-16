@@ -29,7 +29,7 @@ const router = createRouter({
     {
       path: '/events/create',
       name: 'EventCreate',
-      component: () => import('@/pages/Events/EventCreate.vue'),
+      redirect: '/events',
       meta: { requiresAuth: true },
     },
     {
@@ -47,7 +47,7 @@ const router = createRouter({
     {
       path: '/participants/create',
       name: 'ParticipantCreate',
-      component: () => import('@/pages/Participants/ParticipantCreate.vue'),
+      redirect: '/participants',
       meta: { requiresAuth: true },
     },
     {
@@ -65,7 +65,7 @@ const router = createRouter({
     {
       path: '/checkpoints/create',
       name: 'CheckpointCreate',
-      component: () => import('@/pages/Checkpoints/CheckpointCreate.vue'),
+      redirect: '/checkpoints',
       meta: { requiresAuth: true },
     },
     {

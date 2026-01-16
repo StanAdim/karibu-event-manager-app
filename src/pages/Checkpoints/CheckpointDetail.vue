@@ -19,6 +19,12 @@
         <div class="flex items-center justify-between mb-6">
           <h2 class="text-2xl font-semibold text-chatgpt-text">{{ checkpointStore.currentCheckpoint.name }}</h2>
           <div class="flex items-center space-x-4">
+            <button
+              @click="openEditModal"
+              class="px-4 py-2 bg-chatgpt-text text-white rounded-lg hover:bg-opacity-90 transition-colors font-medium"
+            >
+              Edit Checkpoint
+            </button>
             <router-link
               to="/checkpoints"
               class="px-4 py-2 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
@@ -76,24 +82,70 @@
           </div>
         </div>
       </div>
+
+      <!-- Edit Checkpoint Modal -->
+      <BaseModal
+        v-model="isModalOpen"
+        title="Edit Checkpoint"
+        @close="closeModal"
+      >
+        <CheckpointForm
+          ref="checkpointFormRef"
+          :checkpoint="checkpointStore.currentCheckpoint"
+          :loading="checkpointStore.loading"
+          @submit="handleFormSubmit"
+          @cancel="closeModal"
+        />
+      </BaseModal>
     </div>
   </AdminLayout>
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import { onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
-import { useCheckpointStore } from '@/app/store/checkpoint'
+import BaseModal from '@/components/ui/BaseModal.vue'
+import CheckpointForm from '@/components/common/CheckpointForm.vue'
+import { useCheckpointStore, type CreateCheckpointDto } from '@/app/store/checkpoint'
 import { useEventStore } from '@/app/store/event'
 
 const route = useRoute()
 const checkpointStore = useCheckpointStore()
 const eventStore = useEventStore()
+const isModalOpen = ref(false)
+const checkpointFormRef = ref<InstanceType<typeof CheckpointForm> | null>(null)
 
 function getEventName(eventId: string) {
   const event = eventStore.events.find(e => e.id === eventId)
   return event?.name
+}
+
+function openEditModal() {
+  isModalOpen.value = true
+}
+
+function closeModal() {
+  isModalOpen.value = false
+  if (checkpointFormRef.value) {
+    checkpointFormRef.value.setError('')
+  }
+}
+
+async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto & { id: string })) {
+  if (!('id' in data) || !checkpointStore.currentCheckpoint) return
+  
+  try {
+    await checkpointStore.updateCheckpoint(data.id, data)
+    await checkpointStore.fetchCheckpointById(data.id) // Refresh current checkpoint
+    closeModal()
+  } catch (err: any) {
+    const errorMessage = err.response?.data?.message || 'Failed to update checkpoint. Please try again.'
+    if (checkpointFormRef.value) {
+      checkpointFormRef.value.setError(errorMessage)
+    }
+  }
 }
 
 onMounted(async () => {
