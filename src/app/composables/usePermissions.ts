@@ -22,12 +22,18 @@ export function usePermissions() {
 
   // Access Management permissions
   const canAccessUsers = computed(() => hasPermission('users.read'))
+  const canCreateUsers = computed(() => hasPermission('users.create'))
+  const canUpdateUsers = computed(() => hasPermission('users.update'))
+  const canDeleteUsers = computed(() => hasPermission('users.delete'))
   const canAccessRoles = computed(() => hasPermission('roles.read'))
+  const canCreateRoles = computed(() => hasPermission('roles.create'))
+  const canUpdateRoles = computed(() => hasPermission('roles.update'))
+  const canDeleteRoles = computed(() => hasPermission('roles.delete'))
   const canAccessPermissions = computed(() => hasPermission('permissions.read'))
   const canAccessAccessManagement = computed(() => 
     hasAnyPermission(['users.read', 'roles.read', 'permissions.read'])
   )
-  const canManageUserRoles = computed(() => hasPermission('users.manage-roles'))
+  const canManageUserRoles = computed(() => hasAnyPermission(['users.manage-roles', 'roles.update']))
   const canManageUserPermissions = computed(() => hasPermission('users.manage-permissions'))
 
   // Event permissions
@@ -69,7 +75,13 @@ export function usePermissions() {
     hasAllPermissions,
     hasRole,
     canAccessUsers,
+    canCreateUsers,
+    canUpdateUsers,
+    canDeleteUsers,
     canAccessRoles,
+    canCreateRoles,
+    canUpdateRoles,
+    canDeleteRoles,
     canAccessPermissions,
     canAccessAccessManagement,
     canManageUserRoles,

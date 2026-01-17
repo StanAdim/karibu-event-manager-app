@@ -25,6 +25,13 @@ export interface User {
   [key: string]: any
 }
 
+export interface CreateUserDto {
+  name: string
+  email: string
+  password?: string
+  password_confirmation?: string
+}
+
 export const useUserStore = defineStore('user', () => {
   const users = ref<User[]>([])
   const currentUser = ref<User | null>(null)
@@ -123,6 +130,51 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
+  async function createUser(data: CreateUserDto) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.post<{ data?: User } | User>('/api/v1/users', data)
+      const userData = (response.data as any)?.data || response.data
+      const newUser = userData as User
+      users.value.push(newUser)
+      return newUser
+    } catch (err: any) {
+      error.value = err.message || 'Failed to create user'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateUser(id: string | number, data: Partial<CreateUserDto>) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.put<{ data?: User } | User>(`/api/v1/users/${id}`, data)
+      const userData = (response.data as any)?.data || response.data
+      const updatedUser = userData as User
+      
+      // Update in list
+      const index = users.value.findIndex(u => u.id === id)
+      if (index !== -1) {
+        users.value[index] = updatedUser
+      }
+      
+      // Update current user if it matches
+      if (currentUser.value?.id === id) {
+        currentUser.value = updatedUser
+      }
+      
+      return updatedUser
+    } catch (err: any) {
+      error.value = err.message || 'Failed to update user'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     users,
     currentUser,
@@ -132,5 +184,7 @@ export const useUserStore = defineStore('user', () => {
     fetchUserById,
     assignRolesToUser,
     assignPermissionsToUser,
+    createUser,
+    updateUser,
   }
 })

@@ -94,6 +94,51 @@ export const useRoleStore = defineStore('role', () => {
     }
   }
 
+  async function createRole(data: CreateRoleDto) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.post<{ data?: Role } | Role>('/api/v1/roles', data)
+      const roleData = (response.data as any)?.data || response.data
+      const newRole = roleData as Role
+      roles.value.push(newRole)
+      return newRole
+    } catch (err: any) {
+      error.value = err.message || 'Failed to create role'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  async function updateRole(id: string | number, data: Partial<CreateRoleDto>) {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.put<{ data?: Role } | Role>(`/api/v1/roles/${id}`, data)
+      const roleData = (response.data as any)?.data || response.data
+      const updatedRole = roleData as Role
+      
+      // Update in list
+      const index = roles.value.findIndex(r => r.id === id)
+      if (index !== -1) {
+        roles.value[index] = updatedRole
+      }
+      
+      // Update current role if it matches
+      if (currentRole.value?.id === id) {
+        currentRole.value = updatedRole
+      }
+      
+      return updatedRole
+    } catch (err: any) {
+      error.value = err.message || 'Failed to update role'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     roles,
     currentRole,
@@ -102,5 +147,7 @@ export const useRoleStore = defineStore('role', () => {
     fetchRoles,
     fetchRoleById,
     assignPermissionsToRole,
+    createRole,
+    updateRole,
   }
 })

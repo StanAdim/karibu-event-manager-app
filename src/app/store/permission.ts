@@ -19,11 +19,27 @@ export const usePermissionStore = defineStore('permission', () => {
     loading.value = true
     error.value = null
     try {
-      const response = await api.get<{ data?: Permission[] } | Permission[]>('/api/v1/permissions')
-      const permissionsData = Array.isArray(response.data)
-        ? response.data
-        : (response.data as any)?.data || []
-      permissions.value = permissionsData
+      const response = await api.get<{ data?: Permission[] | Record<string, Permission[]> } | Permission[] | Record<string, Permission[]>>('/api/v1/permissions')
+      
+      let permissionsArray: Permission[] = []
+      
+      // Handle different response formats
+      if (Array.isArray(response.data)) {
+        // Direct array response
+        permissionsArray = response.data
+      } else if (response.data && typeof response.data === 'object') {
+        const data = (response.data as any).data || response.data
+        
+        if (Array.isArray(data)) {
+          // Nested array: { data: [...] }
+          permissionsArray = data
+        } else if (typeof data === 'object') {
+          // Nested object grouped by resource: { data: { checkpoints: [...], events: [...] } }
+          permissionsArray = Object.values(data).flat() as Permission[]
+        }
+      }
+      
+      permissions.value = permissionsArray
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch permissions'
       throw err
