@@ -27,27 +27,27 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
-      path: '/events/create',
-      name: 'EventCreate',
-      component: () => import('@/pages/Events/EventCreate.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
       path: '/events/:id',
       name: 'EventDetail',
       component: () => import('@/pages/Events/EventDetail.vue'),
       meta: { requiresAuth: true },
     },
     {
-      path: '/participants',
-      name: 'ParticipantList',
-      component: () => import('@/pages/Participants/ParticipantList.vue'),
+      path: '/events/:eventId/participants',
+      name: 'EventParticipants',
+      component: () => import('@/pages/Events/EventParticipants.vue'),
       meta: { requiresAuth: true },
     },
     {
-      path: '/participants/create',
-      name: 'ParticipantCreate',
-      component: () => import('@/pages/Participants/ParticipantCreate.vue'),
+      path: '/events/:eventId/checkpoints',
+      name: 'EventCheckpoints',
+      component: () => import('@/pages/Events/EventCheckpoints.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
+      path: '/participants',
+      name: 'ParticipantList',
+      component: () => import('@/pages/Participants/ParticipantList.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -60,12 +60,6 @@ const router = createRouter({
       path: '/checkpoints',
       name: 'CheckpointList',
       component: () => import('@/pages/Checkpoints/CheckpointList.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/checkpoints/create',
-      name: 'CheckpointCreate',
-      component: () => import('@/pages/Checkpoints/CheckpointCreate.vue'),
       meta: { requiresAuth: true },
     },
     {

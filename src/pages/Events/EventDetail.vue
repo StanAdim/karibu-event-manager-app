@@ -84,13 +84,13 @@
               <h3 class="text-lg font-semibold text-chatgpt-text mb-4">Quick Actions</h3>
               <div class="space-y-3">
                 <router-link
-                  :to="`/participants?eventId=${eventStore.currentEvent.id}`"
+                  :to="`/events/${eventStore.currentEvent.id}/participants`"
                   class="block w-full px-4 py-2 text-center border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
                 >
                   View Participants
                 </router-link>
                 <router-link
-                  :to="`/checkpoints?eventId=${eventStore.currentEvent.id}`"
+                  :to="`/events/${eventStore.currentEvent.id}/checkpoints`"
                   class="block w-full px-4 py-2 text-center border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
                 >
                   View Checkpoints

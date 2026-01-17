@@ -81,6 +81,25 @@ export const useCheckpointStore = defineStore('checkpoint', () => {
     }
   }
 
+  async function fetchAllCheckpoints() {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.get<{ data?: Checkpoint[] } | Checkpoint[]>(
+        '/api/v1/checkpoints/all'
+      )
+      const checkpointsData = Array.isArray(response.data)
+        ? response.data
+        : (response.data as any)?.data || []
+      checkpoints.value = checkpointsData.map(normalizeCheckpoint)
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch checkpoints'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchCheckpointById(eventId: string | number, checkpointId: string | number) {
     loading.value = true
     error.value = null
@@ -174,6 +193,7 @@ export const useCheckpointStore = defineStore('checkpoint', () => {
     loading,
     error,
     fetchCheckpoints,
+    fetchAllCheckpoints,
     fetchCheckpointById,
     createCheckpoint,
     updateCheckpoint,

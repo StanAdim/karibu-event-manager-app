@@ -135,11 +135,13 @@ import { useCheckpointTypeStore } from '@/app/store/checkpointType'
 interface Props {
   checkpoint?: Checkpoint | null
   loading?: boolean
+  initialEventId?: string | number
 }
 
 const props = withDefaults(defineProps<Props>(), {
   checkpoint: null,
   loading: false,
+  initialEventId: undefined,
 })
 
 const emit = defineEmits<{
@@ -184,18 +186,25 @@ watch(() => props.checkpoint, (checkpoint) => {
       order: checkpoint.order,
     }
   } else {
-    // Reset form for create mode
+    // Reset form for create mode - use initialEventId if provided
     formData.value = {
       name: '',
       description: '',
       checkpoint_type_id: '',
-      eventId: '',
+      eventId: props.initialEventId ? String(props.initialEventId) : '',
       location: '',
       order: undefined,
     }
   }
   error.value = ''
 }, { immediate: true })
+
+// Watch for initialEventId changes when modal opens
+watch(() => props.initialEventId, (newEventId) => {
+  if (!props.checkpoint && newEventId) {
+    formData.value.eventId = String(newEventId)
+  }
+})
 
 function handleSubmit() {
   error.value = ''

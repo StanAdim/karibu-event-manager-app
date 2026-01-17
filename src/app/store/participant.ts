@@ -105,6 +105,25 @@ export const useParticipantStore = defineStore('participant', () => {
     }
   }
 
+  async function fetchAllParticipants() {
+    loading.value = true
+    error.value = null
+    try {
+      const response = await api.get<{ data?: Participant[] } | Participant[]>(
+        '/api/v1/participants/all'
+      )
+      const participantsData = Array.isArray(response.data)
+        ? response.data
+        : (response.data as any)?.data || []
+      participants.value = participantsData.map(normalizeParticipant)
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch participants'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function fetchParticipantById(eventId: string | number, participantId: string | number) {
     loading.value = true
     error.value = null
@@ -341,6 +360,7 @@ export const useParticipantStore = defineStore('participant', () => {
     loading,
     error,
     fetchParticipants,
+    fetchAllParticipants,
     fetchParticipantById,
     createParticipant,
     updateParticipant,

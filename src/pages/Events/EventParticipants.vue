@@ -2,7 +2,12 @@
   <AdminLayout>
     <div>
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-semibold text-chatgpt-text">Participants</h2>
+        <div>
+          <h2 class="text-2xl font-semibold text-chatgpt-text">Participants</h2>
+          <p v-if="eventStore.currentEvent" class="text-sm text-chatgpt-text-light mt-1">
+            Event: {{ eventStore.currentEvent.name }}
+          </p>
+        </div>
         <div class="flex items-center space-x-4">
           <input
             v-model="searchQuery"
@@ -17,6 +22,12 @@
           >
             Add Participant
           </button>
+          <router-link
+            :to="`/events/${eventId}`"
+            class="px-4 py-2 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
+          >
+            Back to Event
+          </router-link>
         </div>
       </div>
 
@@ -25,7 +36,7 @@
       </div>
 
       <div v-else-if="filteredParticipants.length === 0" class="bg-white rounded-lg border border-chatgpt-border p-12 text-center">
-        <p class="text-chatgpt-text-light mb-4">No participants found</p>
+        <p class="text-chatgpt-text-light mb-4">No participants found for this event</p>
         <button
           v-if="canWriteParticipants"
           @click="openCreateModal"
@@ -114,6 +125,7 @@
           ref="participantFormRef"
           :participant="selectedParticipant"
           :loading="participantStore.loading"
+          :initial-event-id="eventId"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />
@@ -130,11 +142,14 @@ import BaseModal from '@/components/ui/BaseModal.vue'
 import ParticipantForm from '@/components/common/ParticipantForm.vue'
 import { usePermissions } from '@/app/composables/usePermissions'
 import { useParticipantStore, type Participant, type CreateParticipantDto } from '@/app/store/participant'
+import { useEventStore } from '@/app/store/event'
 
 const { canReadParticipants, canWriteParticipants } = usePermissions()
 
 const route = useRoute()
 const participantStore = useParticipantStore()
+const eventStore = useEventStore()
+const eventId = computed(() => route.params.eventId as string)
 const searchQuery = ref('')
 const isModalOpen = ref(false)
 const selectedParticipant = ref<Participant | null>(null)
@@ -177,11 +192,11 @@ function closeModal() {
 }
 
 async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantDto & { id: string })) {
-  // Use eventId from form data
-  const eventId = data.eventId as string | undefined
+  // Use eventId from route
+  const finalEventId = data.eventId || eventId.value
   
-  if (!eventId) {
-    const errorMessage = 'Event ID is required. Please select an event.'
+  if (!finalEventId) {
+    const errorMessage = 'Event ID is required'
     if (participantFormRef.value) {
       participantFormRef.value.setError(errorMessage)
     }
@@ -191,14 +206,14 @@ async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantD
   try {
     if ('id' in data) {
       // Edit mode - ensure eventId is included
-      const updateData = { ...data, eventId }
-      await participantStore.updateParticipant(eventId, data.id, updateData)
+      const updateData = { ...data, eventId: finalEventId }
+      await participantStore.updateParticipant(finalEventId, data.id, updateData)
     } else {
       // Create mode - ensure eventId is included
-      const createData = { ...data, eventId }
+      const createData = { ...data, eventId: finalEventId }
       await participantStore.createParticipant(createData)
     }
-    await participantStore.fetchAllParticipants() // Refresh list with all participants
+    await participantStore.fetchParticipants(eventId.value) // Refresh list for this event
     closeModal()
   } catch (err: any) {
     const errorMessage = err.message || err.response?.data?.message || 'Failed to save participant. Please try again.'
@@ -208,7 +223,10 @@ async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantD
   }
 }
 
-onMounted(() => {
-  participantStore.fetchAllParticipants()
+onMounted(async () => {
+  await Promise.all([
+    eventStore.fetchEventById(eventId.value),
+    participantStore.fetchParticipants(eventId.value)
+  ])
 })
 </script>

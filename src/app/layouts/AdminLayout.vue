@@ -212,7 +212,7 @@
                       Permissions
                     </router-link>
                   </li>
-                  <li v-if="canManageCheckpointTypes || hasRole('admin')">
+                  <li v-if="canManageCheckpointTypes || hasRole('super-admin')">
                     <router-link
                       to="/checkpoint-types"
                       class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"

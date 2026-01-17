@@ -2,7 +2,12 @@
   <AdminLayout>
     <div>
       <div class="flex items-center justify-between mb-6">
-        <h2 class="text-2xl font-semibold text-chatgpt-text">Checkpoints</h2>
+        <div>
+          <h2 class="text-2xl font-semibold text-chatgpt-text">Checkpoints</h2>
+          <p v-if="eventStore.currentEvent" class="text-sm text-chatgpt-text-light mt-1">
+            Event: {{ eventStore.currentEvent.name }}
+          </p>
+        </div>
         <div class="flex items-center space-x-4">
           <input
             v-model="searchQuery"
@@ -17,6 +22,12 @@
           >
             Create Checkpoint
           </button>
+          <router-link
+            :to="`/events/${eventId}`"
+            class="px-4 py-2 border border-chatgpt-border rounded-lg hover:bg-gray-50 transition-colors font-medium text-chatgpt-text"
+          >
+            Back to Event
+          </router-link>
         </div>
       </div>
 
@@ -25,7 +36,7 @@
       </div>
 
       <div v-else-if="filteredCheckpoints.length === 0" class="bg-white rounded-lg border border-chatgpt-border p-12 text-center">
-        <p class="text-chatgpt-text-light mb-4">No checkpoints found</p>
+        <p class="text-chatgpt-text-light mb-4">No checkpoints found for this event</p>
         <button
           v-if="canWriteCheckpoints"
           @click="openCreateModal"
@@ -41,9 +52,6 @@
             <tr>
               <th class="px-6 py-3 text-left text-xs font-medium text-chatgpt-text-light uppercase tracking-wider">
                 Name
-              </th>
-              <th class="px-6 py-3 text-left text-xs font-medium text-chatgpt-text-light uppercase tracking-wider">
-                Event
               </th>
               <th class="px-6 py-3 text-left text-xs font-medium text-chatgpt-text-light uppercase tracking-wider">
                 Location
@@ -67,9 +75,6 @@
                 <div v-if="checkpoint.description" class="text-sm text-chatgpt-text-light truncate max-w-xs">
                   {{ checkpoint.description }}
                 </div>
-              </td>
-              <td class="px-6 py-4 whitespace-nowrap text-sm text-chatgpt-text">
-                {{ getEventName(checkpoint.eventId) || '—' }}
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-chatgpt-text">
                 {{ checkpoint.location || '—' }}
@@ -110,6 +115,7 @@
           ref="checkpointFormRef"
           :checkpoint="selectedCheckpoint"
           :loading="checkpointStore.loading"
+          :initial-event-id="eventId"
           @submit="handleFormSubmit"
           @cancel="closeModal"
         />
@@ -133,6 +139,7 @@ const { canReadCheckpoints, canWriteCheckpoints } = usePermissions()
 const route = useRoute()
 const checkpointStore = useCheckpointStore()
 const eventStore = useEventStore()
+const eventId = computed(() => route.params.eventId as string)
 const searchQuery = ref('')
 const isModalOpen = ref(false)
 const selectedCheckpoint = ref<Checkpoint | null>(null)
@@ -155,11 +162,6 @@ const filteredCheckpoints = computed(() => {
   )
 })
 
-function getEventName(eventId: string) {
-  const event = eventStore.events.find(e => e.id === eventId)
-  return event?.name
-}
-
 function openCreateModal() {
   selectedCheckpoint.value = null
   isModalOpen.value = true
@@ -179,8 +181,11 @@ function closeModal() {
 }
 
 async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto & { id: string })) {
-  if (!data.eventId) {
-    const errorMessage = 'Event ID is required. Please select an event.'
+  // Use eventId from route
+  const finalEventId = data.eventId || eventId.value
+  
+  if (!finalEventId) {
+    const errorMessage = 'Event ID is required'
     if (checkpointFormRef.value) {
       checkpointFormRef.value.setError(errorMessage)
     }
@@ -190,13 +195,13 @@ async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto
   try {
     if ('id' in data) {
       // Edit mode
-      await checkpointStore.updateCheckpoint(data.eventId, data.id, data)
+      await checkpointStore.updateCheckpoint(finalEventId, data.id, data)
     } else {
       // Create mode - ensure eventId is included
-      const createData = { ...data, eventId: data.eventId }
+      const createData = { ...data, eventId: finalEventId }
       await checkpointStore.createCheckpoint(createData)
     }
-    await checkpointStore.fetchAllCheckpoints() // Refresh list with all checkpoints
+    await checkpointStore.fetchCheckpoints(eventId.value) // Refresh list for this event
     closeModal()
   } catch (err: any) {
     const errorMessage = err.message || err.response?.data?.message || 'Failed to save checkpoint. Please try again.'
@@ -208,8 +213,8 @@ async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto
 
 onMounted(async () => {
   await Promise.all([
-    eventStore.fetchEvents(),
-    checkpointStore.fetchAllCheckpoints(),
+    eventStore.fetchEventById(eventId.value),
+    checkpointStore.fetchCheckpoints(eventId.value)
   ])
 })
 </script>

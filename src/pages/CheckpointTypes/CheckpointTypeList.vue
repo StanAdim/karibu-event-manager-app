@@ -152,7 +152,7 @@ const deleting = ref(false)
 const deleteError = ref('')
 
 // Check if user is admin or has checkpoint types permissions
-const isAdmin = computed(() => hasRole('admin'))
+const isAdmin = computed(() => hasRole('super-admin'))
 const canManageTypes = computed(() => isAdmin.value || canCreateCheckpointTypes.value || canUpdateCheckpointTypes.value || canDeleteCheckpointTypes.value)
 
 const typeModalTitle = computed(() => {
