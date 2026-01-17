@@ -64,7 +64,7 @@
             >
               <td class="px-6 py-4 whitespace-nowrap">
                 <div class="text-sm font-medium text-chatgpt-text">
-                  {{ participant.firstName }} {{ participant.lastName }}
+                  {{ participant.full_name }}
                 </div>
               </td>
               <td class="px-6 py-4 whitespace-nowrap text-sm text-chatgpt-text">
@@ -151,10 +151,10 @@ const filteredParticipants = computed(() => {
   const query = searchQuery.value.toLowerCase()
   return participantStore.participants.filter(
     (participant) =>
-      participant.firstName.toLowerCase().includes(query) ||
-      participant.lastName.toLowerCase().includes(query) ||
-      participant.email.toLowerCase().includes(query) ||
-      participant.phone?.toLowerCase().includes(query)
+      (participant.firstName || '').toLowerCase().includes(query) ||
+      (participant.lastName || '').toLowerCase().includes(query) ||
+      (participant.email || '').toLowerCase().includes(query) ||
+      (participant.phone || '').toLowerCase().includes(query)
   )
 })
 

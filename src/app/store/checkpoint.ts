@@ -6,6 +6,7 @@ export interface Checkpoint {
   id: string | number
   name: string
   description?: string
+  type?: string
   event_id?: string | number
   eventId?: string | number
   location?: string
@@ -20,6 +21,7 @@ export interface Checkpoint {
 export interface CreateCheckpointDto {
   name: string
   description?: string
+  type: string
   eventId: string | number
   location?: string
   order?: number
@@ -46,6 +48,7 @@ export const useCheckpointStore = defineStore('checkpoint', () => {
     return {
       name: data.name,
       description: data.description,
+      type: data.type,
       location: data.location,
       order: data.order,
     }

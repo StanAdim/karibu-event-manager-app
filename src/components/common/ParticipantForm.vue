@@ -1,33 +1,17 @@
 <template>
   <form @submit.prevent="handleSubmit" class="space-y-6">
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div>
-        <label for="firstName" class="block text-sm font-medium text-chatgpt-text mb-2">
-          First Name <span class="text-red-500">*</span>
-        </label>
-        <input
-          id="firstName"
-          v-model="formData.firstName"
-          type="text"
-          required
-          class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
-          placeholder="Enter first name"
-        />
-      </div>
-
-      <div>
-        <label for="lastName" class="block text-sm font-medium text-chatgpt-text mb-2">
-          Last Name <span class="text-red-500">*</span>
-        </label>
-        <input
-          id="lastName"
-          v-model="formData.lastName"
-          type="text"
-          required
-          class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
-          placeholder="Enter last name"
-        />
-      </div>
+    <div>
+      <label for="fullName" class="block text-sm font-medium text-chatgpt-text mb-2">
+        Full Name <span class="text-red-500">*</span>
+      </label>
+      <input
+        id="fullName"
+        v-model="formData.fullName"
+        type="text"
+        required
+        class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
+        placeholder="Enter full name"
+      />
     </div>
 
     <div>
@@ -127,8 +111,7 @@ const eventStore = useEventStore()
 const isEditMode = computed(() => !!props.participant)
 
 const formData = ref<CreateParticipantDto>({
-  firstName: '',
-  lastName: '',
+  fullName: '',
   email: '',
   phone: '',
   eventId: '',
@@ -143,9 +126,14 @@ onMounted(() => {
 // Initialize form with participant data if editing
 watch(() => props.participant, (participant) => {
   if (participant) {
+    // Construct fullName from firstName/lastName if fullName is not available
+    const fullName = participant.fullName || 
+      (participant.firstName && participant.lastName 
+        ? `${participant.firstName} ${participant.lastName}` 
+        : participant.firstName || participant.lastName || '')
+    
     formData.value = {
-      firstName: participant.firstName,
-      lastName: participant.lastName,
+      fullName: fullName,
       email: participant.email,
       phone: participant.phone || '',
       eventId: participant.eventId || '',
@@ -153,8 +141,7 @@ watch(() => props.participant, (participant) => {
   } else {
     // Reset form for create mode
     formData.value = {
-      firstName: '',
-      lastName: '',
+      fullName: '',
       email: '',
       phone: '',
       eventId: '',

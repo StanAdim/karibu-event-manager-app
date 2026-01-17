@@ -28,6 +28,25 @@
     </div>
 
     <div>
+      <label for="type" class="block text-sm font-medium text-chatgpt-text mb-2">
+        Type <span class="text-red-500">*</span>
+      </label>
+      <select
+        id="type"
+        v-model="formData.type"
+        required
+        class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
+      >
+        <option value="">Select a type</option>
+        <option value="entry">Entry</option>
+        <option value="checkpoint">Checkpoint</option>
+        <option value="exit">Exit</option>
+        <option value="registration">Registration</option>
+        <option value="security">Security</option>
+      </select>
+    </div>
+
+    <div>
       <label for="eventId" class="block text-sm font-medium text-chatgpt-text mb-2">
         Event <span class="text-red-500">*</span>
       </label>
@@ -129,6 +148,7 @@ const isEditMode = computed(() => !!props.checkpoint)
 const formData = ref<CreateCheckpointDto>({
   name: '',
   description: '',
+  type: '',
   eventId: '',
   location: '',
   order: undefined,
@@ -146,6 +166,7 @@ watch(() => props.checkpoint, (checkpoint) => {
     formData.value = {
       name: checkpoint.name,
       description: checkpoint.description || '',
+      type: checkpoint.type || '',
       eventId: checkpoint.eventId,
       location: checkpoint.location || '',
       order: checkpoint.order,
@@ -155,6 +176,7 @@ watch(() => props.checkpoint, (checkpoint) => {
     formData.value = {
       name: '',
       description: '',
+      type: '',
       eventId: '',
       location: '',
       order: undefined,

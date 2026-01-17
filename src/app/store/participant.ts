@@ -4,6 +4,8 @@ import api from '../services/api'
 
 export interface Participant {
   id: string | number
+  full_name?: string
+  fullName?: string
   first_name?: string
   firstName?: string
   last_name?: string
@@ -24,8 +26,7 @@ export interface Participant {
 }
 
 export interface CreateParticipantDto {
-  firstName: string
-  lastName: string
+  fullName: string
   email: string
   phone?: string
   eventId: string | number
@@ -55,6 +56,12 @@ export const useParticipantStore = defineStore('participant', () => {
   function normalizeParticipant(participant: Participant): Participant {
     return {
       ...participant,
+      fullName: participant.full_name || participant.fullName || 
+        (participant.first_name && participant.last_name 
+          ? `${participant.first_name} ${participant.last_name}` 
+          : participant.firstName && participant.lastName
+            ? `${participant.firstName} ${participant.lastName}`
+            : undefined),
       firstName: participant.first_name || participant.firstName,
       lastName: participant.last_name || participant.lastName,
       eventId: participant.event_id || participant.eventId,
@@ -68,8 +75,7 @@ export const useParticipantStore = defineStore('participant', () => {
   // Normalize create/update payload for API
   function normalizePayload(data: CreateParticipantDto): any {
     return {
-      first_name: data.firstName,
-      last_name: data.lastName,
+      full_name: data.fullName,
       email: data.email,
       phone: data.phone,
     }
