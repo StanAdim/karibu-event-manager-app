@@ -97,6 +97,16 @@
                   >
                     View
                   </router-link>
+                  <button
+                    v-if="canWriteParticipants"
+                    @click="confirmDeleteParticipant(participant)"
+                    class="text-red-600 hover:text-red-700 transition-colors"
+                    title="Delete"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -118,6 +128,16 @@
           @cancel="closeModal"
         />
       </BaseModal>
+
+      <!-- Delete Confirmation Modal -->
+      <ConfirmModal
+        v-model="isDeleteConfirmOpen"
+        title="Delete Participant"
+        message="Are you sure you want to delete this participant? This action cannot be undone."
+        confirm-text="Yes, Delete"
+        cancel-text="Cancel"
+        @confirm="confirmDelete"
+      />
     </div>
   </AdminLayout>
 </template>
@@ -127,6 +147,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
+import ConfirmModal from '@/components/ui/ConfirmModal.vue'
 import ParticipantForm from '@/components/common/ParticipantForm.vue'
 import { usePermissions } from '@/app/composables/usePermissions'
 import { useParticipantStore, type Participant, type CreateParticipantDto } from '@/app/store/participant'
@@ -137,7 +158,9 @@ const route = useRoute()
 const participantStore = useParticipantStore()
 const searchQuery = ref('')
 const isModalOpen = ref(false)
+const isDeleteConfirmOpen = ref(false)
 const selectedParticipant = ref<Participant | null>(null)
+const participantToDelete = ref<Participant | null>(null)
 const participantFormRef = ref<InstanceType<typeof ParticipantForm> | null>(null)
 
 const modalTitle = computed(() => {
@@ -205,6 +228,24 @@ async function handleFormSubmit(data: CreateParticipantDto | (CreateParticipantD
     if (participantFormRef.value) {
       participantFormRef.value.setError(errorMessage)
     }
+  }
+}
+
+function confirmDeleteParticipant(participant: Participant) {
+  participantToDelete.value = participant
+  isDeleteConfirmOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!participantToDelete.value || !participantToDelete.value.eventId) return
+
+  try {
+    await participantStore.deleteParticipant(participantToDelete.value.eventId, participantToDelete.value.id)
+    await participantStore.fetchAllParticipants() // Refresh list
+    participantToDelete.value = null
+  } catch (err: any) {
+    const errorMessage = err.message || err.response?.data?.message || 'Failed to delete participant. Please try again.'
+    alert(errorMessage)
   }
 }
 

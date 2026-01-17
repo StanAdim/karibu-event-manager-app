@@ -93,6 +93,16 @@
                   >
                     View
                   </router-link>
+                  <button
+                    v-if="canWriteCheckpoints"
+                    @click="confirmDeleteCheckpoint(checkpoint)"
+                    class="text-red-600 hover:text-red-700 transition-colors"
+                    title="Delete"
+                  >
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
                 </div>
               </td>
             </tr>
@@ -114,6 +124,16 @@
           @cancel="closeModal"
         />
       </BaseModal>
+
+      <!-- Delete Confirmation Modal -->
+      <ConfirmModal
+        v-model="isDeleteConfirmOpen"
+        title="Delete Checkpoint"
+        message="Are you sure you want to delete this checkpoint? This action cannot be undone."
+        confirm-text="Yes, Delete"
+        cancel-text="Cancel"
+        @confirm="confirmDelete"
+      />
     </div>
   </AdminLayout>
 </template>
@@ -123,6 +143,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import AdminLayout from '@/app/layouts/AdminLayout.vue'
 import BaseModal from '@/components/ui/BaseModal.vue'
+import ConfirmModal from '@/components/ui/ConfirmModal.vue'
 import CheckpointForm from '@/components/common/CheckpointForm.vue'
 import { usePermissions } from '@/app/composables/usePermissions'
 import { useCheckpointStore, type Checkpoint, type CreateCheckpointDto } from '@/app/store/checkpoint'
@@ -135,7 +156,9 @@ const checkpointStore = useCheckpointStore()
 const eventStore = useEventStore()
 const searchQuery = ref('')
 const isModalOpen = ref(false)
+const isDeleteConfirmOpen = ref(false)
 const selectedCheckpoint = ref<Checkpoint | null>(null)
+const checkpointToDelete = ref<Checkpoint | null>(null)
 const checkpointFormRef = ref<InstanceType<typeof CheckpointForm> | null>(null)
 
 const modalTitle = computed(() => {
@@ -203,6 +226,24 @@ async function handleFormSubmit(data: CreateCheckpointDto | (CreateCheckpointDto
     if (checkpointFormRef.value) {
       checkpointFormRef.value.setError(errorMessage)
     }
+  }
+}
+
+function confirmDeleteCheckpoint(checkpoint: Checkpoint) {
+  checkpointToDelete.value = checkpoint
+  isDeleteConfirmOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!checkpointToDelete.value || !checkpointToDelete.value.eventId) return
+
+  try {
+    await checkpointStore.deleteCheckpoint(checkpointToDelete.value.eventId, checkpointToDelete.value.id)
+    await checkpointStore.fetchAllCheckpoints() // Refresh list
+    checkpointToDelete.value = null
+  } catch (err: any) {
+    const errorMessage = err.message || err.response?.data?.message || 'Failed to delete checkpoint. Please try again.'
+    alert(errorMessage)
   }
 }
 
