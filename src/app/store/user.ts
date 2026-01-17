@@ -70,13 +70,13 @@ export const useUserStore = defineStore('user', () => {
     }
   }
 
-  async function assignRolesToUser(userId: string | number, roleIds: (string | number)[]) {
+  async function assignRolesToUser(userId: string | number, roleNames: string[]) {
     loading.value = true
     error.value = null
     try {
       const response = await api.put<{ data?: User } | User>(
         `/api/v1/users/${userId}/roles`,
-        { roles: roleIds }
+        { roles: roleNames }
       )
       const userData = (response.data as any)?.data || response.data
       

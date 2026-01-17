@@ -9,8 +9,8 @@
       >
         <input
           type="checkbox"
-          :checked="isRoleAssigned(role.id)"
-          @change="toggleRole(role.id, $event.target.checked)"
+          :checked="isRoleAssigned(role.name)"
+          @change="toggleRole(role.name, $event.target.checked)"
           :disabled="saving"
           class="rounded border-chatgpt-border text-chatgpt-text focus:ring-chatgpt-text"
         />
@@ -58,41 +58,38 @@ const success = ref<string | null>(null)
 
 const allRoles = computed(() => roleStore.roles)
 
-function isRoleAssigned(roleId: string | number): boolean {
+function isRoleAssigned(roleName: string): boolean {
   return props.currentRoles.some((r: Role | string) => {
     if (typeof r === 'string') {
-      // If role is a string, compare with role name
-      const role = roleStore.roles.find(role => role.name === r)
-      return role ? role.id === roleId : false
+      return r === roleName
     }
-    return r.id === roleId
+    return r.name === roleName
   })
 }
 
-async function toggleRole(roleId: string | number, assigned: boolean) {
+async function toggleRole(roleName: string, assigned: boolean) {
   saving.value = true
   error.value = null
   success.value = null
 
   try {
-    // Convert current roles to IDs
-    const currentRoleIds = props.currentRoles.map((r: Role | string) => {
+    // Convert current roles to names (strings)
+    const currentRoleNames = props.currentRoles.map((r: Role | string) => {
       if (typeof r === 'string') {
-        const role = roleStore.roles.find(role => role.name === r)
-        return role ? role.id : null
+        return r
       }
-      return r.id
-    }).filter((id): id is string | number => id !== null)
+      return r.name
+    }).filter((name): name is string => !!name)
     
-    let newRoleIds: (string | number)[]
+    let newRoleNames: string[]
 
     if (assigned) {
-      newRoleIds = [...currentRoleIds, roleId]
+      newRoleNames = [...currentRoleNames, roleName]
     } else {
-      newRoleIds = currentRoleIds.filter(id => id !== roleId)
+      newRoleNames = currentRoleNames.filter(name => name !== roleName)
     }
 
-    await userStore.assignRolesToUser(props.userId, newRoleIds)
+    await userStore.assignRolesToUser(props.userId, newRoleNames)
     success.value = 'Roles updated successfully'
     emit('updated')
     
