@@ -110,6 +110,12 @@ const router = createRouter({
       component: () => import('@/pages/Permissions/PermissionList.vue'),
       meta: { requiresAuth: true, permission: 'permissions:read' },
     },
+    {
+      path: '/checkpoint-types',
+      name: 'CheckpointTypeList',
+      component: () => import('@/pages/CheckpointTypes/CheckpointTypeList.vue'),
+      meta: { requiresAuth: true },
+    },
     // 404 catch-all route - must be last
     {
       path: '/:pathMatch(.*)*',

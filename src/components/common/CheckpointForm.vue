@@ -28,22 +28,28 @@
     </div>
 
     <div>
-      <label for="type" class="block text-sm font-medium text-chatgpt-text mb-2">
+      <label for="checkpoint_type_id" class="block text-sm font-medium text-chatgpt-text mb-2">
         Type <span class="text-red-500">*</span>
       </label>
       <select
-        id="type"
-        v-model="formData.type"
+        id="checkpoint_type_id"
+        v-model="formData.checkpoint_type_id"
         required
         class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-chatgpt-text focus:border-transparent"
+        :disabled="checkpointTypeStore.loading"
       >
         <option value="">Select a type</option>
-        <option value="entry">Entry</option>
-        <option value="checkpoint">Checkpoint</option>
-        <option value="exit">Exit</option>
-        <option value="registration">Registration</option>
-        <option value="security">Security</option>
+        <option
+          v-for="type in checkpointTypeStore.checkpointTypes"
+          :key="type.id"
+          :value="String(type.id)"
+        >
+          {{ type.name }}
+        </option>
       </select>
+      <p v-if="checkpointTypeStore.checkpointTypes.length === 0 && !checkpointTypeStore.loading" class="mt-1 text-xs text-chatgpt-text-light">
+        No checkpoint types available. Please create one first.
+      </p>
     </div>
 
     <div>
@@ -124,6 +130,7 @@
 import { ref, watch, computed, onMounted } from 'vue'
 import { useCheckpointStore, type CreateCheckpointDto, type Checkpoint } from '@/app/store/checkpoint'
 import { useEventStore } from '@/app/store/event'
+import { useCheckpointTypeStore } from '@/app/store/checkpointType'
 
 interface Props {
   checkpoint?: Checkpoint | null
@@ -142,13 +149,14 @@ const emit = defineEmits<{
 
 const checkpointStore = useCheckpointStore()
 const eventStore = useEventStore()
+const checkpointTypeStore = useCheckpointTypeStore()
 
 const isEditMode = computed(() => !!props.checkpoint)
 
 const formData = ref<CreateCheckpointDto>({
   name: '',
   description: '',
-  type: '',
+  checkpoint_type_id: '',
   eventId: '',
   location: '',
   order: undefined,
@@ -156,17 +164,21 @@ const formData = ref<CreateCheckpointDto>({
 
 const error = ref('')
 
-onMounted(() => {
-  eventStore.fetchEvents()
+onMounted(async () => {
+  await Promise.all([
+    eventStore.fetchEvents(),
+    checkpointTypeStore.fetchCheckpointTypes()
+  ])
 })
 
 // Initialize form with checkpoint data if editing
 watch(() => props.checkpoint, (checkpoint) => {
   if (checkpoint) {
+    const typeId = checkpoint.checkpointTypeId || checkpoint.checkpoint_type_id
     formData.value = {
       name: checkpoint.name,
       description: checkpoint.description || '',
-      type: checkpoint.type || '',
+      checkpoint_type_id: typeId ? String(typeId) : '',
       eventId: checkpoint.eventId,
       location: checkpoint.location || '',
       order: checkpoint.order,
@@ -176,7 +188,7 @@ watch(() => props.checkpoint, (checkpoint) => {
     formData.value = {
       name: '',
       description: '',
-      type: '',
+      checkpoint_type_id: '',
       eventId: '',
       location: '',
       order: undefined,

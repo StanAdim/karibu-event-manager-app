@@ -6,6 +6,8 @@ export interface Checkpoint {
   id: string | number
   name: string
   description?: string
+  checkpoint_type_id?: string | number
+  checkpointTypeId?: string | number
   type?: string
   event_id?: string | number
   eventId?: string | number
@@ -21,10 +23,10 @@ export interface Checkpoint {
 export interface CreateCheckpointDto {
   name: string
   description?: string
-  type: string
+  checkpoint_type_id: string | number
   eventId: string | number
   location?: string
-  order?: number
+  order?: number | undefined
 }
 
 export const useCheckpointStore = defineStore('checkpoint', () => {
@@ -37,6 +39,7 @@ export const useCheckpointStore = defineStore('checkpoint', () => {
   function normalizeCheckpoint(checkpoint: Checkpoint): Checkpoint {
     return {
       ...checkpoint,
+      checkpointTypeId: checkpoint.checkpoint_type_id || checkpoint.checkpointTypeId,
       eventId: checkpoint.event_id || checkpoint.eventId,
       createdAt: checkpoint.created_at || checkpoint.createdAt,
       updatedAt: checkpoint.updated_at || checkpoint.updatedAt,
@@ -48,7 +51,7 @@ export const useCheckpointStore = defineStore('checkpoint', () => {
     return {
       name: data.name,
       description: data.description,
-      type: data.type,
+      checkpoint_type_id: typeof data.checkpoint_type_id === 'string' ? Number(data.checkpoint_type_id) : data.checkpoint_type_id,
       location: data.location,
       order: data.order,
     }

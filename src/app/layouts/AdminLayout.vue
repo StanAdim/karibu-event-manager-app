@@ -212,6 +212,15 @@
                       Permissions
                     </router-link>
                   </li>
+                  <li v-if="canManageCheckpointTypes || hasRole('admin')">
+                    <router-link
+                      to="/checkpoint-types"
+                      class="block px-3 py-2 rounded-lg text-sm text-chatgpt-text-light hover:bg-gray-100 transition-colors"
+                      :class="{ 'bg-gray-100 text-chatgpt-text font-medium': $route.path === '/checkpoint-types' }"
+                    >
+                      Checkpoint Types
+                    </router-link>
+                  </li>
                 </ul>
               </div>
             </li>
@@ -287,6 +296,8 @@ const {
   canReadParticipants,
   canReadCheckpoints,
   canViewReports,
+  canManageCheckpointTypes,
+  hasRole,
 } = usePermissions()
 
 const sidebarCollapsed = ref(false)
@@ -300,7 +311,7 @@ watch(() => route.path, (path) => {
   eventsMenuOpen.value = path.startsWith('/events')
   participantsMenuOpen.value = path.startsWith('/participants')
   checkpointsMenuOpen.value = path.startsWith('/checkpoints')
-  accessManagementMenuOpen.value = path.startsWith('/users') || path.startsWith('/roles') || path.startsWith('/permissions')
+  accessManagementMenuOpen.value = path.startsWith('/users') || path.startsWith('/roles') || path.startsWith('/permissions') || path.startsWith('/checkpoint-types')
 }, { immediate: true })
 
 function toggleSidebar() {

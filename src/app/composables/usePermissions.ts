@@ -60,6 +60,13 @@ export function usePermissions() {
   const canUpdateCheckpoints = computed(() => hasPermission('checkpoints.update'))
   const canDeleteCheckpoints = computed(() => hasPermission('checkpoints.delete'))
 
+  // Checkpoint Type permissions
+  const canReadCheckpointTypes = computed(() => hasPermission('checkpoint-types.read'))
+  const canCreateCheckpointTypes = computed(() => hasPermission('checkpoint-types.create'))
+  const canUpdateCheckpointTypes = computed(() => hasPermission('checkpoint-types.update'))
+  const canDeleteCheckpointTypes = computed(() => hasPermission('checkpoint-types.delete'))
+  const canManageCheckpointTypes = computed(() => hasAnyPermission(['checkpoint-types.create', 'checkpoint-types.update', 'checkpoint-types.delete']))
+
   // Check-in permissions
   const canVerifyCheckins = computed(() => hasPermission('checkins.verify'))
   const canReadCheckins = computed(() => hasPermission('checkins.read'))
@@ -104,6 +111,11 @@ export function usePermissions() {
     canCreateCheckpoints,
     canUpdateCheckpoints,
     canDeleteCheckpoints,
+    canReadCheckpointTypes,
+    canCreateCheckpointTypes,
+    canUpdateCheckpointTypes,
+    canDeleteCheckpointTypes,
+    canManageCheckpointTypes,
     canVerifyCheckins,
     canReadCheckins,
     canDeleteCheckins,
