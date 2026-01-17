@@ -27,7 +27,7 @@
           class="bg-white rounded-lg border border-chatgpt-border p-6"
         >
           <h3 class="text-lg font-semibold text-chatgpt-text mb-4 capitalize">{{ resource }}</h3>
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-2">
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
             <div
               v-for="permission in permissions"
               :key="permission.id"
@@ -36,9 +36,9 @@
               <div class="text-sm font-medium text-chatgpt-text">
                 {{ permission.display_name || permission.name }}
               </div>
-<!--              <div v-if="permission.description" class="text-xs text-chatgpt-text-light mt-1">-->
-<!--                {{ permission.description }}-->
-<!--              </div>-->
+              <div v-if="permission.description" class="text-xs text-chatgpt-text-light mt-1">
+                {{ permission.description }}
+              </div>
               <div v-if="permission.action" class="mt-2">
                 <span class="inline-block px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 capitalize">
                   {{ permission.action }}
