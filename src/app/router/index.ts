@@ -29,7 +29,7 @@ const router = createRouter({
     {
       path: '/events/create',
       name: 'EventCreate',
-      redirect: '/events',
+      component: () => import('@/pages/Events/EventCreate.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -47,7 +47,7 @@ const router = createRouter({
     {
       path: '/participants/create',
       name: 'ParticipantCreate',
-      redirect: '/participants',
+      component: () => import('@/pages/Participants/ParticipantCreate.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -65,7 +65,7 @@ const router = createRouter({
     {
       path: '/checkpoints/create',
       name: 'CheckpointCreate',
-      redirect: '/checkpoints',
+      component: () => import('@/pages/Checkpoints/CheckpointCreate.vue'),
       meta: { requiresAuth: true },
     },
     {
@@ -109,6 +109,13 @@ const router = createRouter({
       name: 'PermissionList',
       component: () => import('@/pages/Permissions/PermissionList.vue'),
       meta: { requiresAuth: true, permission: 'permissions:read' },
+    },
+    // 404 catch-all route - must be last
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: () => import('@/pages/NotFound.vue'),
+      meta: { requiresAuth: false },
     },
   ],
 })
