@@ -6,13 +6,11 @@
         <label for="start_time" class="block text-sm font-medium text-chatgpt-text mb-2">
           Start Time <span class="text-red-500">*</span>
         </label>
-        <input
+        <TimeSelector
           id="start_time"
           v-model="formData.start_time"
-          type="datetime-local"
-          required
-          step="900"
-          class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          :step="15"
+          :required="true"
         />
       </div>
 
@@ -20,13 +18,11 @@
         <label for="end_time" class="block text-sm font-medium text-chatgpt-text mb-2">
           End Time <span class="text-red-500">*</span>
         </label>
-        <input
+        <TimeSelector
           id="end_time"
           v-model="formData.end_time"
-          type="datetime-local"
-          required
-          step="900"
-          class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+          :step="15"
+          :required="true"
         />
         <p v-if="timeConflictWarning" class="mt-1 text-xs text-red-600">
           ⚠️ Time overlaps with existing time slots
@@ -90,6 +86,7 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
+import TimeSelector from '@/components/ui/TimeSelector.vue'
 import type { TimeSlot, CreateTimeSlotDto, UpdateTimeSlotDto, ProgrammeDay } from '@/app/store/programme'
 import { useProgrammeStore } from '@/app/store/programme'
 
@@ -113,7 +110,13 @@ const emit = defineEmits<{
 const programmeStore = useProgrammeStore()
 const isEditMode = computed(() => !!props.timeSlot)
 
-const formData = ref<Omit<CreateTimeSlotDto, 'day_id'>>({
+// Store time strings in HH:mm format
+const formData = ref<{
+  start_time: string
+  end_time: string
+  title: string
+  description: string
+}>({
   start_time: '',
   end_time: '',
   title: '',
@@ -122,19 +125,73 @@ const formData = ref<Omit<CreateTimeSlotDto, 'day_id'>>({
 
 const error = ref('')
 
+// Helper function to combine day date with time
+function combineDateWithTime(dayDate: string, time: string): string {
+  if (!dayDate || !time) return ''
+  
+  // Validate time format (HH:mm)
+  if (!/^\d{2}:\d{2}$/.test(time)) return ''
+  
+  // Handle both YYYY-MM-DD and ISO date formats
+  let date: Date
+  if (dayDate.includes('T')) {
+    // ISO format - parse directly
+    date = new Date(dayDate)
+  } else {
+    // YYYY-MM-DD format - parse as local date
+    const [year, month, day] = dayDate.split('-').map(Number)
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return ''
+    date = new Date(year, month - 1, day) // month is 0-indexed
+  }
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) return ''
+  
+  const [hours, minutes] = time.split(':').map(Number)
+  
+  // Validate hours and minutes
+  if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+    return ''
+  }
+  
+  date.setHours(hours, minutes, 0, 0)
+  
+  // Check if result is still valid
+  if (isNaN(date.getTime())) return ''
+  
+  return date.toISOString()
+}
+
 // Check for time conflicts with existing time slots
 const timeConflictWarning = computed(() => {
-  if (!props.day?.time_slots || !formData.value.start_time || !formData.value.end_time) {
+  if (!props.day?.time_slots || !props.day?.date || !formData.value.start_time || !formData.value.end_time) {
     return false
   }
   
-  const newStart = new Date(formData.value.start_time).getTime()
-  const newEnd = new Date(formData.value.end_time).getTime()
+  // Validate that we can create valid dates before checking conflicts
+  const startDateTimeStr = combineDateWithTime(props.day.date, formData.value.start_time)
+  const endDateTimeStr = combineDateWithTime(props.day.date, formData.value.end_time)
+  
+  if (!startDateTimeStr || !endDateTimeStr) {
+    return false
+  }
+  
+  const newStart = new Date(startDateTimeStr).getTime()
+  const newEnd = new Date(endDateTimeStr).getTime()
+  
+  // Check if dates are valid
+  if (isNaN(newStart) || isNaN(newEnd)) {
+    return false
+  }
   
   return props.day.time_slots.some(slot => {
     if (isEditMode.value && props.timeSlot?.id === slot.id) return false
+    
     const slotStart = new Date(slot.start_time).getTime()
     const slotEnd = new Date(slot.end_time).getTime()
+    
+    // Skip invalid slot times
+    if (isNaN(slotStart) || isNaN(slotEnd)) return false
     
     return (
       (newStart >= slotStart && newStart < slotEnd) ||
@@ -144,27 +201,36 @@ const timeConflictWarning = computed(() => {
   })
 })
 
+// Extract time from datetime string (format: HH:mm)
+function extractTimeFromDateTime(dateTimeString: string): string {
+  if (!dateTimeString) return '09:00'
+  
+  const date = new Date(dateTimeString)
+  
+  // Check if date is valid
+  if (isNaN(date.getTime())) return '09:00'
+  
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
 // Initialize form data from timeSlot prop
 watch(
   () => props.timeSlot,
   (timeSlot) => {
     if (timeSlot) {
       formData.value = {
-        start_time: formatDateTimeLocal(timeSlot.start_time),
-        end_time: formatDateTimeLocal(timeSlot.end_time),
+        start_time: extractTimeFromDateTime(timeSlot.start_time),
+        end_time: extractTimeFromDateTime(timeSlot.end_time),
         title: timeSlot.title || '',
         description: timeSlot.description || '',
       }
     } else {
-      // Reset form for new time slot
-      const now = new Date()
-      now.setMinutes(0)
-      const nextHour = new Date(now)
-      nextHour.setHours(nextHour.getHours() + 1)
-      
+      // Reset form for new time slot - default to 09:00 - 10:00
       formData.value = {
-        start_time: formatDateTimeLocal(now.toISOString()),
-        end_time: formatDateTimeLocal(nextHour.toISOString()),
+        start_time: '09:00',
+        end_time: '10:00',
         title: '',
         description: '',
       }
@@ -173,38 +239,49 @@ watch(
   { immediate: true }
 )
 
-function formatDateTimeLocal(dateTimeString: string): string {
-  const date = new Date(dateTimeString)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}`
-}
-
 function handleSubmit() {
   if (timeConflictWarning.value) {
     error.value = 'Time slot overlaps with existing time slots. Please adjust the times.'
     return
   }
 
+  if (!props.day?.id) {
+    error.value = 'Day is required'
+    return
+  }
+
+  if (!props.day?.date) {
+    error.value = 'Day date is required'
+    return
+  }
+
+  if (!formData.value.start_time || !formData.value.end_time) {
+    error.value = 'Start time and end time are required'
+    return
+  }
+
   error.value = ''
+
+  // Combine day's date with selected times
+  const startDateTime = combineDateWithTime(props.day.date, formData.value.start_time)
+  const endDateTime = combineDateWithTime(props.day.date, formData.value.end_time)
 
   if (isEditMode.value && props.timeSlot) {
     const updateData: UpdateTimeSlotDto = {
       id: props.timeSlot.id,
-      ...formData.value,
+      start_time: startDateTime,
+      end_time: endDateTime,
+      title: formData.value.title,
+      description: formData.value.description,
     }
     emit('submit', updateData)
   } else {
-    if (!props.day?.id) {
-      error.value = 'Day is required'
-      return
-    }
     const createData: CreateTimeSlotDto = {
       day_id: props.day.id,
-      ...formData.value,
+      start_time: startDateTime,
+      end_time: endDateTime,
+      title: formData.value.title,
+      description: formData.value.description,
     }
     emit('submit', createData)
   }
