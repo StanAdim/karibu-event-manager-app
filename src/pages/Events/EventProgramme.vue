@@ -476,10 +476,19 @@ async function handleTimeSlotSubmit(data: CreateTimeSlotDto | UpdateTimeSlotDto)
     if ('id' in data && data.id) {
       await programmeStore.updateTimeSlot(data.id, data)
     } else {
+      // Ensure we have a valid day_id from currentDay or the form data
       const createData = data as CreateTimeSlotDto
-      await programmeStore.createTimeSlot(createData.day_id, {
+      const dayId = createData.day_id || programmeStore.currentDay?.id
+      
+      if (!dayId) {
+        throw new Error('Day ID is required to create a time slot')
+      }
+      
+      await programmeStore.createTimeSlot(dayId, {
         start_time: createData.start_time,
         end_time: createData.end_time,
+        venue: createData.venue,
+        order: createData.order,
         title: createData.title,
         description: createData.description,
       })

@@ -53,10 +53,13 @@ export interface Session {
 export interface TimeSlot {
   id: string | number
   day_id: string | number
+  event_day_id?: string | number
   start_time: string
   end_time: string
   title?: string
   description?: string
+  venue?: string
+  order?: number
   sessions?: Session[]
   created_at?: string
   updated_at?: string
@@ -100,10 +103,13 @@ export interface UpdateDayDto extends Partial<CreateDayDto> {
 
 export interface CreateTimeSlotDto {
   day_id: string | number
+  event_day_id?: string | number
   start_time: string
   end_time: string
   title?: string
   description?: string
+  venue?: string
+  order?: number
 }
 
 export interface UpdateTimeSlotDto extends Partial<CreateTimeSlotDto> {
@@ -167,8 +173,11 @@ export const useProgrammeStore = defineStore('programme', () => {
     return {
       ...slot,
       day_id: slot.day_id || slot.dayId,
+      event_day_id: slot.event_day_id || slot.eventDayId,
       start_time: slot.start_time || slot.startTime,
       end_time: slot.end_time || slot.endTime,
+      venue: slot.venue,
+      order: slot.order !== undefined ? slot.order : undefined,
       sessions: slot.sessions?.map(normalizeSession) || [],
       created_at: slot.created_at || slot.createdAt,
       updated_at: slot.updated_at || slot.updatedAt,
@@ -399,16 +408,32 @@ export const useProgrammeStore = defineStore('programme', () => {
     loading.value = true
     error.value = null
     try {
+      // Validate dayId
+      if (dayId === null || dayId === undefined || dayId === 'undefined' || dayId === 'null') {
+        throw new Error('Day ID is required')
+      }
+
       // Find the day to get event_id
       const day = days.value.find(d => d.id === dayId) || currentDay.value
       if (!day) throw new Error('Day not found')
       
       const eventId = day.event_id
+      
+      // Ensure eventId is valid
+      if (!eventId || eventId === 'undefined' || eventId === 'null') {
+        throw new Error('Event ID is required')
+      }
+      
+      // New route: POST /events/{event}/days/time-slots
+      // The event_day_id is sent in the request body
       const response = await api.post<{ data?: TimeSlot } | TimeSlot>(
-        `/api/v1/events/${eventId}/days/${dayId}/time-slots`,
+        `/api/v1/events/${eventId}/days/time-slots`,
         {
           start_time: data.start_time,
           end_time: data.end_time,
+          event_day_id: dayId,
+          venue: data.venue,
+          order: data.order,
           title: data.title,
           description: data.description,
         }
@@ -456,6 +481,9 @@ export const useProgrammeStore = defineStore('programme', () => {
         {
           start_time: data.start_time,
           end_time: data.end_time,
+          event_day_id: data.event_day_id,
+          venue: data.venue,
+          order: data.order,
           title: data.title,
           description: data.description,
         }

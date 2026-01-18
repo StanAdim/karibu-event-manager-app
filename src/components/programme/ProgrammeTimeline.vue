@@ -25,7 +25,7 @@
         </div>
 
         <!-- Time Scale with Grid Lines -->
-        <div class="relative h-10 border-t border-b border-chatgpt-border">
+        <div class="relative h-10 my-4  border-t border-b border-chatgpt-border">
           <!-- Grid Lines -->
           <div class="absolute inset-0 flex">
             <div
@@ -54,7 +54,7 @@
       </div>
 
       <!-- Timeline Content -->
-      <div class="relative" :style="{ minHeight: `${timelineHeight}px`, padding: '1.5rem', minWidth: '800px' }">
+      <div class="relative " :style="{ minHeight: `${timelineHeight}px`, padding: '1.5rem', minWidth: '800px' }">
         <!-- Loading State -->
         <div v-if="loading" class="space-y-4">
           <div

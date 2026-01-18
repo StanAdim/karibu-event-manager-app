@@ -25,7 +25,7 @@
           :required="true"
         />
         <p v-if="timeConflictWarning" class="mt-1 text-xs text-red-600">
-          ⚠️ Time overlaps with existing time slots
+          ⚠️ Time overlaps with existing time slot{{ formData.venue ? ' in the same venue' : '' }}
         </p>
       </div>
     </div>
@@ -42,6 +42,37 @@
         class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
         placeholder="e.g., Morning Session, Afternoon Break"
       />
+    </div>
+
+    <!-- Venue -->
+    <div>
+      <label for="venue" class="block text-sm font-medium text-chatgpt-text mb-2">
+        Venue
+      </label>
+      <input
+        id="venue"
+        v-model="formData.venue"
+        type="text"
+        maxlength="255"
+        class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        placeholder="e.g., Main Hall, Conference Room A"
+      />
+    </div>
+
+    <!-- Order -->
+    <div>
+      <label for="order" class="block text-sm font-medium text-chatgpt-text mb-2">
+        Order
+      </label>
+      <input
+        id="order"
+        v-model.number="formData.order"
+        type="number"
+        min="0"
+        class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+        placeholder="Display order (optional)"
+      />
+      <p class="mt-1 text-xs text-chatgpt-text-light">Optional: Used to sort time slots</p>
     </div>
 
     <!-- Description -->
@@ -116,11 +147,15 @@ const formData = ref<{
   end_time: string
   title: string
   description: string
+  venue: string
+  order: number | null
 }>({
   start_time: '',
   end_time: '',
   title: '',
   description: '',
+  venue: '',
+  order: null,
 })
 
 const error = ref('')
@@ -162,11 +197,15 @@ function combineDateWithTime(dayDate: string, time: string): string {
   return date.toISOString()
 }
 
-// Check for time conflicts with existing time slots
+// Check for time conflicts with existing time slots in the same venue
 const timeConflictWarning = computed(() => {
   if (!props.day?.time_slots || !props.day?.date || !formData.value.start_time || !formData.value.end_time) {
     return false
   }
+  
+  // If venue is specified, only check conflicts within the same venue
+  // If venue is not specified, check conflicts with all slots (no venue)
+  const venue = formData.value.venue?.trim() || null
   
   // Validate that we can create valid dates before checking conflicts
   const startDateTimeStr = combineDateWithTime(props.day.date, formData.value.start_time)
@@ -184,8 +223,13 @@ const timeConflictWarning = computed(() => {
     return false
   }
   
-  return props.day.time_slots.some(slot => {
+  return props.day.time_slots.some((slot: TimeSlot) => {
     if (isEditMode.value && props.timeSlot?.id === slot.id) return false
+    
+    // Check venue match: if venue is specified, only check slots with the same venue
+    // If venue is null/empty, only check slots with no venue
+    const slotVenue = slot.venue?.trim() || null
+    if (venue !== slotVenue) return false
     
     const slotStart = new Date(slot.start_time).getTime()
     const slotEnd = new Date(slot.end_time).getTime()
@@ -193,6 +237,7 @@ const timeConflictWarning = computed(() => {
     // Skip invalid slot times
     if (isNaN(slotStart) || isNaN(slotEnd)) return false
     
+    // Check for time overlap
     return (
       (newStart >= slotStart && newStart < slotEnd) ||
       (newEnd > slotStart && newEnd <= slotEnd) ||
@@ -218,13 +263,15 @@ function extractTimeFromDateTime(dateTimeString: string): string {
 // Initialize form data from timeSlot prop
 watch(
   () => props.timeSlot,
-  (timeSlot) => {
+  (timeSlot: TimeSlot | null) => {
     if (timeSlot) {
       formData.value = {
         start_time: extractTimeFromDateTime(timeSlot.start_time),
         end_time: extractTimeFromDateTime(timeSlot.end_time),
         title: timeSlot.title || '',
         description: timeSlot.description || '',
+        venue: timeSlot.venue || '',
+        order: timeSlot.order !== undefined ? timeSlot.order : null,
       }
     } else {
       // Reset form for new time slot - default to 09:00 - 10:00
@@ -233,6 +280,8 @@ watch(
         end_time: '10:00',
         title: '',
         description: '',
+        venue: '',
+        order: null,
       }
     }
   },
@@ -241,7 +290,8 @@ watch(
 
 function handleSubmit() {
   if (timeConflictWarning.value) {
-    error.value = 'Time slot overlaps with existing time slots. Please adjust the times.'
+    const venueText = formData.value.venue ? ` in venue "${formData.value.venue}"` : ''
+    error.value = `Time slot overlaps with an existing time slot${venueText}. Please adjust the times or venue.`
     return
   }
 
@@ -262,24 +312,44 @@ function handleSubmit() {
 
   error.value = ''
 
-  // Combine day's date with selected times
-  const startDateTime = combineDateWithTime(props.day.date, formData.value.start_time)
-  const endDateTime = combineDateWithTime(props.day.date, formData.value.end_time)
+  // Backend expects time in H:i format (e.g., "09:00"), not full datetime
+  // The formData already has times in HH:mm format from TimeSelector, which matches Laravel's H:i format
+  const startTime = formData.value.start_time // Already in HH:mm format (e.g., "09:00")
+  const endTime = formData.value.end_time // Already in HH:mm format (e.g., "10:00")
+
+  // Validate end_time is after start_time
+  if (startTime >= endTime) {
+    error.value = 'End time must be after start time'
+    return
+  }
 
   if (isEditMode.value && props.timeSlot) {
     const updateData: UpdateTimeSlotDto = {
       id: props.timeSlot.id,
-      start_time: startDateTime,
-      end_time: endDateTime,
+      start_time: startTime,
+      end_time: endTime,
+      event_day_id: props.day?.id,
+      venue: formData.value.venue?.trim() || undefined,
+      order: formData.value.order !== null && formData.value.order !== undefined ? formData.value.order : undefined,
       title: formData.value.title,
       description: formData.value.description,
     }
     emit('submit', updateData)
   } else {
+    // Ensure day_id is always set and valid (check for null/undefined but allow 0)
+    const dayId = props.day?.id
+    if (dayId === null || dayId === undefined) {
+      error.value = 'Day ID is required'
+      return
+    }
+    
     const createData: CreateTimeSlotDto = {
-      day_id: props.day.id,
-      start_time: startDateTime,
-      end_time: endDateTime,
+      day_id: dayId,
+      event_day_id: dayId,
+      start_time: startTime,
+      end_time: endTime,
+      venue: formData.value.venue?.trim() || undefined,
+      order: formData.value.order !== null && formData.value.order !== undefined ? formData.value.order : undefined,
       title: formData.value.title,
       description: formData.value.description,
     }
