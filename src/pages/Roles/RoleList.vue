@@ -127,7 +127,9 @@ import RolePermissionAssignment from '@/components/common/RolePermissionAssignme
 import { usePermissions } from '@/app/composables/usePermissions'
 import { useRoleStore, type Role, type CreateRoleDto } from '@/app/store/role'
 
-const { canCreateRoles, canUpdateRoles } = usePermissions()
+const { canUpdateRoles } = usePermissions()
+// Creating roles requires roles.update permission
+const canCreateRoles = canUpdateRoles
 
 const roleStore = useRoleStore()
 const isRoleModalOpen = ref(false)

@@ -100,22 +100,22 @@
             :current-day="programmeStore.currentDay"
             :sessions="programmeStore.sessions"
             :loading="programmeStore.loading"
-            :draggable="canWriteProgramme"
+            :draggable="canManageProgramme"
             @session-click="handleSessionClick"
           />
-
-          <!-- Add Session FAB -->
-          <button
-            v-if="canWriteProgramme"
-            @click="openSessionModal"
-            class="fixed bottom-8 right-8 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-110 flex items-center justify-center z-30"
-            title="Add Session"
-          >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-            </svg>
-          </button>
         </div>
+
+        <!-- Add Session FAB - Show if user has permission and there's at least one programme day -->
+        <button
+          v-if="canManageProgramme && programmeStore.programmeDays.length > 0"
+          @click="openSessionModal"
+          class="fixed bottom-8 right-8 w-14 h-14 bg-indigo-600 text-white rounded-full shadow-lg hover:bg-indigo-700 transition-all hover:scale-110 flex items-center justify-center z-30"
+          title="Add Session"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
 
         <!-- No Days State -->
         <div v-else class="text-center py-12 bg-white rounded-lg border border-chatgpt-border">
@@ -184,7 +184,7 @@ import { usePermissions } from '@/app/composables/usePermissions'
 
 const route = useRoute()
 const router = useRouter()
-const { canWriteProgramme } = usePermissions()
+const { canWriteProgramme, canManageProgramme } = usePermissions()
 
 const eventId = computed(() => route.params.eventId as string)
 const eventStore = useEventStore()
@@ -225,6 +225,16 @@ function handleDaySelect(day: any) {
 }
 
 function openSessionModal(session?: Session) {
+  // Ensure there's a current day before opening the modal
+  if (!session && !programmeStore.currentDay && programmeStore.programmeDays.length > 0) {
+    programmeStore.setCurrentDay(programmeStore.programmeDays[0])
+  }
+  
+  if (!session && !programmeStore.currentDay) {
+    console.warn('Cannot open session modal: No programme day selected')
+    return
+  }
+  
   selectedSession.value = session || null
   isSessionModalOpen.value = true
 }

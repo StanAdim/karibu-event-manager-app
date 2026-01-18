@@ -295,10 +295,12 @@ const {
   canReadEvents,
   canReadParticipants,
   canReadCheckpoints,
-  canViewReports,
-  canManageCheckpointTypes,
   hasRole,
 } = usePermissions()
+// Reports functionality not available - permission not in super-admin list
+const canViewReports = { value: false }
+// Checkpoint types functionality not available - permission not in super-admin list
+const canManageCheckpointTypes = { value: false }
 
 const sidebarCollapsed = ref(false)
 const eventsMenuOpen = ref(false)

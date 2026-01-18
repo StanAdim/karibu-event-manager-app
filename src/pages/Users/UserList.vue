@@ -142,7 +142,9 @@ import RoleAssignment from '@/components/common/RoleAssignment.vue'
 import { usePermissions } from '@/app/composables/usePermissions'
 import { useUserStore, type User, type CreateUserDto } from '@/app/store/user'
 
-const { canCreateUsers, canUpdateUsers, canManageUserRoles } = usePermissions()
+const { canCreateUsers, canUpdateUsers, canUpdateRoles } = usePermissions()
+// Managing user roles requires roles.update permission
+const canManageUserRoles = canUpdateRoles
 
 const userStore = useUserStore()
 const searchQuery = ref('')

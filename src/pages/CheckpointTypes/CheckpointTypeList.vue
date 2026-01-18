@@ -141,7 +141,7 @@ import { useCheckpointTypeStore, type CheckpointType, type CreateCheckpointTypeD
 import { usePermissions } from '@/app/composables/usePermissions'
 
 const checkpointTypeStore = useCheckpointTypeStore()
-const { canCreateCheckpointTypes, canUpdateCheckpointTypes, canDeleteCheckpointTypes, hasRole } = usePermissions()
+const { hasRole } = usePermissions()
 
 const isTypeModalOpen = ref(false)
 const isDeleteModalOpen = ref(false)
@@ -151,9 +151,9 @@ const typeFormRef = ref<InstanceType<typeof CheckpointTypeForm> | null>(null)
 const deleting = ref(false)
 const deleteError = ref('')
 
-// Check if user is admin or has checkpoint types permissions
+// Checkpoint types permissions not in super-admin list - only super-admin can manage
 const isAdmin = computed(() => hasRole('super-admin'))
-const canManageTypes = computed(() => isAdmin.value || canCreateCheckpointTypes.value || canUpdateCheckpointTypes.value || canDeleteCheckpointTypes.value)
+const canManageTypes = computed(() => isAdmin.value)
 
 const typeModalTitle = computed(() => {
   return selectedType.value ? 'Edit Checkpoint Type' : 'Add New Checkpoint Type'

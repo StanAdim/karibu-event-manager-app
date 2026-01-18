@@ -78,7 +78,11 @@ import PermissionAssignment from '@/components/common/PermissionAssignment.vue'
 import { usePermissions } from '@/app/composables/usePermissions'
 import { useUserStore } from '@/app/store/user'
 
-const { canManageUserRoles, canManageUserPermissions } = usePermissions()
+const { canUpdateRoles, canUpdateUsers } = usePermissions()
+// Managing user roles requires roles.update permission
+const canManageUserRoles = canUpdateRoles
+// Managing user permissions requires users.update permission
+const canManageUserPermissions = canUpdateUsers
 
 const route = useRoute()
 const userStore = useUserStore()

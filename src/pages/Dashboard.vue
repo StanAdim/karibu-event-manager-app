@@ -120,7 +120,9 @@ import { useParticipantStore } from '@/app/store/participant'
 import { useCheckpointStore } from '@/app/store/checkpoint'
 
 const router = useRouter()
-const { canWriteEvents, canWriteParticipants, canWriteCheckpoints, canViewReports } = usePermissions()
+const { canWriteEvents, canWriteParticipants, canWriteCheckpoints } = usePermissions()
+// Reports functionality not available - permission not in super-admin list
+const canViewReports = { value: false }
 
 function openCreateEventModal() {
   router.push('/events')

@@ -180,14 +180,18 @@ export const useAuthStore = defineStore('auth', () => {
       }
       
       // Update permissions and roles if provided in response
-      if (responseData.permissions && Array.isArray(responseData.permissions)) {
-        userPermissions.value = responseData.permissions
-        localStorage.setItem('user_permissions', JSON.stringify(responseData.permissions))
+      // Check multiple possible locations for permissions/roles
+      const permissions = responseData.permissions || (userData as any)?.permissions || (responseData as any)?.data?.permissions
+      const roles = responseData.roles || (userData as any)?.roles || (responseData as any)?.data?.roles
+      
+      if (permissions && Array.isArray(permissions)) {
+        userPermissions.value = permissions
+        localStorage.setItem('user_permissions', JSON.stringify(permissions))
       }
       
-      if (responseData.roles && Array.isArray(responseData.roles)) {
-        userRoles.value = responseData.roles
-        localStorage.setItem('user_roles', JSON.stringify(responseData.roles))
+      if (roles && Array.isArray(roles)) {
+        userRoles.value = roles
+        localStorage.setItem('user_roles', JSON.stringify(roles))
       }
       
       if (userData && typeof userData === 'object' && 'id' in userData) {
