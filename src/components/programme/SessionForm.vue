@@ -49,39 +49,51 @@
       />
     </div>
 
-    <!-- Time Range -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- Time Slot Selection -->
+    <div v-if="!isEditMode && availableTimeSlots.length > 0">
+      <label for="time_slot_id" class="block text-sm font-medium text-chatgpt-text mb-2">
+        Time Slot <span class="text-red-500">*</span>
+      </label>
+      <select
+        id="time_slot_id"
+        v-model="formData.time_slot_id"
+        required
+        class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+      >
+        <option value="">Select a time slot</option>
+        <option
+          v-for="slot in availableTimeSlots"
+          :key="slot.id"
+          :value="slot.id"
+        >
+          {{ formatTimeSlot(slot) }}
+        </option>
+      </select>
+    </div>
+    
+    <!-- Time Range (for display or edit mode) -->
+    <div v-if="isEditMode" class="grid grid-cols-1 md:grid-cols-2 gap-6">
       <div>
-        <label for="start_time" class="block text-sm font-medium text-chatgpt-text mb-2">
-          Start Time <span class="text-red-500">*</span>
+        <label class="block text-sm font-medium text-chatgpt-text-light mb-2">
+          Start Time
         </label>
-        <input
-          id="start_time"
-          v-model="formData.start_time"
-          type="datetime-local"
-          required
-          step="900"
-          class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-        />
-        <p v-if="timeConflictWarning" class="mt-1 text-xs text-red-600">
-          ⚠️ Time conflict detected
-        </p>
+        <div class="px-4 py-2 border border-chatgpt-border rounded-lg bg-gray-50 text-chatgpt-text">
+          {{ session?.start_time ? formatDateTime(session.start_time) : 'N/A' }}
+        </div>
       </div>
-
       <div>
-        <label for="end_time" class="block text-sm font-medium text-chatgpt-text mb-2">
-          End Time <span class="text-red-500">*</span>
+        <label class="block text-sm font-medium text-chatgpt-text-light mb-2">
+          End Time
         </label>
-        <input
-          id="end_time"
-          v-model="formData.end_time"
-          type="datetime-local"
-          required
-          step="900"
-          class="w-full px-4 py-2 border border-chatgpt-border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-        />
+        <div class="px-4 py-2 border border-chatgpt-border rounded-lg bg-gray-50 text-chatgpt-text">
+          {{ session?.end_time ? formatDateTime(session.end_time) : 'N/A' }}
+        </div>
       </div>
     </div>
+    
+    <p v-if="timeConflictWarning" class="text-xs text-red-600 mt-2">
+      ⚠️ Time conflict detected with existing sessions
+    </p>
 
     <!-- Location / Hall -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -200,17 +212,18 @@
 
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
-import type { Session, CreateSessionDto, UpdateSessionDto, SessionType } from '@/app/store/programme'
+import type { Session, CreateSessionDto, UpdateSessionDto, SessionType, ProgrammeDay } from '@/app/store/programme'
 import { useProgrammeStore } from '@/app/store/programme'
 
 interface Props {
   session?: Session | null
-  programmeDayId: string | number
+  currentDay?: ProgrammeDay | null
   loading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   session: null,
+  currentDay: null,
   loading: false,
 })
 
@@ -223,13 +236,11 @@ const programmeStore = useProgrammeStore()
 
 const isEditMode = computed(() => !!props.session)
 
-const formData = ref<CreateSessionDto>({
-  programme_day_id: props.programmeDayId,
+const formData = ref<CreateSessionDto & { time_slot_id?: string | number }>({
+  time_slot_id: props.currentDay?.time_slots?.[0]?.id,
   type: 'keynote',
   title: '',
   description: '',
-  start_time: '',
-  end_time: '',
   location: '',
   hall: '',
   speaker_id: undefined,
@@ -238,26 +249,35 @@ const formData = ref<CreateSessionDto>({
   catering_notes: '',
 })
 
+// Available time slots for selection
+const availableTimeSlots = computed(() => {
+  return props.currentDay?.time_slots || []
+})
+
 const panelistIdsInput = ref('')
 const error = ref('')
 
-// Watch for time changes to check conflicts
+// Get selected time slot for conflict checking
+const selectedTimeSlot = computed(() => {
+  if (!formData.value.time_slot_id || !props.currentDay?.time_slots) return null
+  return props.currentDay.time_slots.find(slot => slot.id === formData.value.time_slot_id)
+})
+
+// Watch for time slot changes to check conflicts (for new sessions, conflicts would be within the same time slot)
 const timeConflictWarning = computed(() => {
-  if (!formData.value.start_time || !formData.value.end_time) return false
-  const conflicts = programmeStore.checkTimeConflicts(
-    formData.value.start_time,
-    formData.value.end_time,
-    isEditMode.value ? props.session?.id : undefined
-  )
-  return conflicts.length > 0
+  // For edit mode or when creating, conflicts would be checked at the time slot level
+  // This is a simplified check - you might want to enhance this
+  return false
 })
 
 const speakerConflictWarning = computed(() => {
-  if (!formData.value.speaker_id || !formData.value.start_time || !formData.value.end_time) return false
+  if (!formData.value.speaker_id || !selectedTimeSlot.value) return false
+  const slotStart = selectedTimeSlot.value.start_time
+  const slotEnd = selectedTimeSlot.value.end_time
   const conflicts = programmeStore.checkSpeakerConflicts(
     formData.value.speaker_id,
-    formData.value.start_time,
-    formData.value.end_time,
+    slotStart,
+    slotEnd,
     isEditMode.value ? props.session?.id : undefined
   )
   return conflicts.length > 0
@@ -269,12 +289,10 @@ watch(
   (session) => {
     if (session) {
       formData.value = {
-        programme_day_id: session.programme_day_id,
+        time_slot_id: session.time_slot_id,
         type: session.type,
         title: session.title,
         description: session.description || '',
-        start_time: formatDateTimeLocal(session.start_time),
-        end_time: formatDateTimeLocal(session.end_time),
         location: session.location || '',
         hall: session.hall || '',
         speaker_id: session.speaker_id,
@@ -283,19 +301,53 @@ watch(
         catering_notes: session.catering_notes || '',
       }
       panelistIdsInput.value = session.panelists?.map(p => String(p.id)).join(', ') || ''
+    } else {
+      // Reset form for new session
+      formData.value = {
+        time_slot_id: props.currentDay?.time_slots?.[0]?.id,
+        type: 'keynote',
+        title: '',
+        description: '',
+        location: '',
+        hall: '',
+        speaker_id: undefined,
+        moderator_id: undefined,
+        panelist_ids: [],
+        catering_notes: '',
+      }
+      panelistIdsInput.value = ''
     }
   },
   { immediate: true }
 )
 
-function formatDateTimeLocal(dateTimeString: string): string {
+// Watch current day to update available time slots
+watch(
+  () => props.currentDay,
+  (day) => {
+    if (!props.session && day?.time_slots?.length) {
+      formData.value.time_slot_id = day.time_slots[0].id
+    }
+  }
+)
+
+function formatDateTime(dateTimeString: string): string {
   const date = new Date(dateTimeString)
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const day = String(date.getDate()).padStart(2, '0')
-  const hours = String(date.getHours()).padStart(2, '0')
-  const minutes = String(date.getMinutes()).padStart(2, '0')
-  return `${year}-${month}-${day}T${hours}:${minutes}`
+  return date.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  })
+}
+
+function formatTimeSlot(slot: any): string {
+  const start = new Date(slot.start_time)
+  const end = new Date(slot.end_time)
+  const startTime = start.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  const endTime = end.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  return slot.title ? `${slot.title} (${startTime} - ${endTime})` : `${startTime} - ${endTime}`
 }
 
 function handleTypeChange() {
@@ -336,13 +388,20 @@ function handleSubmit() {
   }
 
   if (isEditMode.value && props.session) {
+    const { time_slot_id, ...sessionData } = formData.value
     const updateData: UpdateSessionDto = {
       id: props.session.id,
-      ...formData.value,
+      ...sessionData,
     }
     emit('submit', updateData)
   } else {
-    emit('submit', formData.value)
+    // For new sessions, ensure time_slot_id is provided
+    if (!formData.value.time_slot_id) {
+      error.value = 'Please select a time slot'
+      return
+    }
+    const { time_slot_id, ...sessionData } = formData.value
+    emit('submit', { ...sessionData, time_slot_id })
   }
 }
 

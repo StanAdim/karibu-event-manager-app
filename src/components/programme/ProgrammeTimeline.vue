@@ -65,7 +65,7 @@
         </div>
 
         <!-- Empty State -->
-        <div v-else-if="!sessions || sessions.length === 0" class="text-center py-12">
+        <div v-else-if="sessionsWithTimes.length === 0" class="text-center py-12">
           <svg
             class="mx-auto h-12 w-12 text-chatgpt-text-light mb-4"
             fill="none"
@@ -93,7 +93,7 @@
         </div>
 
         <!-- Proportional Timeline with Sessions -->
-        <div v-if="!loading && sessions && sessions.length > 0" class="relative" style="height: 100%">
+        <div v-if="!loading && sessionsWithTimes.length > 0" class="relative" style="height: 100%">
           <!-- Sessions positioned proportionally -->
           <div
             v-for="session in positionedSessions"
@@ -174,33 +174,72 @@ const timeSlots = computed(() => {
   return slots
 })
 
-// Calculate timeline time range (could be auto-calculated from sessions, but using props for now)
+// Get sessions with their time slot times
+const sessionsWithTimes = computed(() => {
+  if (!props.sessions || !props.currentDay?.time_slots) return []
+  
+  return props.sessions.map(session => {
+    // Find the time slot for this session
+    const timeSlot = props.currentDay!.time_slots?.find(ts => 
+      ts.sessions?.some(s => s.id === session.id)
+    )
+    
+    // Use time slot times if session doesn't have its own times
+    return {
+      ...session,
+      start_time: session.start_time || timeSlot?.start_time || '',
+      end_time: session.end_time || timeSlot?.end_time || '',
+    }
+  }).filter(s => s.start_time && s.end_time)
+})
+
+// Calculate timeline time range from time slots or sessions
 const timelineStart = computed(() => {
-  if (!props.sessions || props.sessions.length === 0) {
-    return props.startHour
+  if (props.currentDay?.time_slots && props.currentDay.time_slots.length > 0) {
+    const earliest = Math.min(
+      ...props.currentDay.time_slots.map(ts => {
+        const date = new Date(ts.start_time)
+        return date.getHours() + date.getMinutes() / 60
+      })
+    )
+    return Math.max(props.startHour, Math.floor(earliest))
   }
-  const earliest = Math.min(
-    ...props.sessions.map((s: Session) => {
-      const date = new Date(s.start_time)
-      return date.getHours() + date.getMinutes() / 60
-    })
-  )
-  // Round down to nearest hour, but not less than startHour
-  return Math.max(props.startHour, Math.floor(earliest))
+  
+  if (sessionsWithTimes.value.length > 0) {
+    const earliest = Math.min(
+      ...sessionsWithTimes.value.map(s => {
+        const date = new Date(s.start_time)
+        return date.getHours() + date.getMinutes() / 60
+      })
+    )
+    return Math.max(props.startHour, Math.floor(earliest))
+  }
+  
+  return props.startHour
 })
 
 const timelineEnd = computed(() => {
-  if (!props.sessions || props.sessions.length === 0) {
-    return props.endHour
+  if (props.currentDay?.time_slots && props.currentDay.time_slots.length > 0) {
+    const latest = Math.max(
+      ...props.currentDay.time_slots.map(ts => {
+        const date = new Date(ts.end_time)
+        return date.getHours() + date.getMinutes() / 60
+      })
+    )
+    return Math.min(props.endHour, Math.ceil(latest))
   }
-  const latest = Math.max(
-    ...props.sessions.map((s: Session) => {
-      const date = new Date(s.end_time)
-      return date.getHours() + date.getMinutes() / 60
-    })
-  )
-  // Round up to nearest hour, but not more than endHour
-  return Math.min(props.endHour, Math.ceil(latest))
+  
+  if (sessionsWithTimes.value.length > 0) {
+    const latest = Math.max(
+      ...sessionsWithTimes.value.map(s => {
+        const date = new Date(s.end_time)
+        return date.getHours() + date.getMinutes() / 60
+      })
+    )
+    return Math.min(props.endHour, Math.ceil(latest))
+  }
+  
+  return props.endHour
 })
 
 const timelineDuration = computed(() => {
@@ -228,7 +267,7 @@ const timelineHeight = computed(() => {
 
 // Calculate proportional positions for sessions
 const positionedSessions = computed((): PositionedSession[] => {
-  if (!props.sessions || props.sessions.length === 0) {
+  if (sessionsWithTimes.value.length === 0) {
     return []
   }
 
@@ -236,7 +275,7 @@ const positionedSessions = computed((): PositionedSession[] => {
   const rows: Session[][] = [] // Track which sessions are in which row
 
   // Sort sessions by start time
-  const sortedSessions = [...props.sessions].sort((a, b) => {
+  const sortedSessions = [...sessionsWithTimes.value].sort((a, b) => {
     return new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
   })
 

@@ -58,6 +58,11 @@ function isActive(dayId: string | number): boolean {
 }
 
 function getSessionCount(day: ProgrammeDay): number {
+  if (day.time_slots) {
+    return day.time_slots.reduce((total, slot) => {
+      return total + (slot.sessions?.length || 0)
+    }, 0)
+  }
   return day.sessions?.length || 0
 }
 
